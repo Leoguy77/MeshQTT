@@ -3,6 +3,7 @@ using Meshtastic;
 using Meshtastic.Protobufs;
 using Meshtastic.Crypto;
 using MQTTnet.Protocol;
+using Meshtastic.Cli.Extensions;
 
 namespace MeshQTT;
 
@@ -53,16 +54,10 @@ class Program
                     return;
                 }
                 Data? data = DecryptEnvelope(envelope);
-                if (data == null)
+                if (data?.Portnum == PortNum.TextMessageApp)
                 {
-                    Console.WriteLine("Decrypted payload is null or invalid, skipping further processing.");
-                    context.ProcessPublish = false; // Skip processing
-                    return;
+                    Console.WriteLine($"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}");
                 }
-
-
-
-                Console.WriteLine($"Received MQTT message on topic {context.ApplicationMessage.Topic}, payload length: {payload.Length}");
             }
             catch (Exception ex)
             {
@@ -218,12 +213,12 @@ class Program
                 var keyBytes = System.Convert.FromBase64String(key);
                 var decrypted = PacketEncryption.TransformPacket(envelope.Packet.Encrypted.ToByteArray(), nonce, keyBytes);
                 payload = Data.Parser.ParseFrom(decrypted);
-                if (payload.Portnum > PortNum.UnknownApp && payload.Payload.Length > 0)
+                if (payload != null && payload.Portnum > PortNum.UnknownApp && payload.Payload.Length > 0)
                     return payload;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to decrypt with key {key}: {ex.Message}");
+                //Console.WriteLine($"Failed to decrypt with key {key}: {ex.Message}");
             }
         }
 
