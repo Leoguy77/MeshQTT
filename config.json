@@ -1,5 +1,5 @@
 {
-  "Port": 8883,
+  "Port": 1883,
   "Users": [
     {
       "UserName": "Hans",
