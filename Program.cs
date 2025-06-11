@@ -208,11 +208,24 @@ class Program
 
     static Data? DecryptEnvelope(ServiceEnvelope envelope)
     {
-        var nonce = new NonceGenerator(envelope.Packet.From, envelope.Packet.Id).Create();
-        var decrypted = PacketEncryption.TransformPacket(envelope.Packet.Encrypted.ToByteArray(), nonce, Resources.DEFAULT_PSK);
-        var payload = Data.Parser.ParseFrom(decrypted);
-        if (payload.Portnum > PortNum.UnknownApp && payload.Payload.Length > 0)
-            return payload;
+        // Try to decrypt with all available keys
+        foreach (var key in config?.EncryptionKeys ?? [])
+        {
+            Data? payload = null;
+            try
+            {
+                var nonce = new NonceGenerator(envelope.Packet.From, envelope.Packet.Id).Create();
+                var keyBytes = System.Convert.FromBase64String(key);
+                var decrypted = PacketEncryption.TransformPacket(envelope.Packet.Encrypted.ToByteArray(), nonce, keyBytes);
+                payload = Data.Parser.ParseFrom(decrypted);
+                if (payload.Portnum > PortNum.UnknownApp && payload.Payload.Length > 0)
+                    return payload;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to decrypt with key {key}: {ex.Message}");
+            }
+        }
 
         return null;
     }
