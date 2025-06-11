@@ -1,0 +1,57 @@
+{
+  "Port": 8883,
+  "Users": [
+    {
+      "UserName": "Hans",
+      "ClientId": "Hans",
+      "Password": "Test",
+      "SubscriptionTopicLists": {
+        "BlacklistTopics": ["a", "b/+", "c/#"],
+        "WhitelistTopics": ["d", "e/+", "f/#"]
+      },
+      "PublishTopicLists": {
+        "BlacklistTopics": ["a", "b/+", "c/#"],
+        "WhitelistTopics": ["d", "e/+", "f/#"]
+      }
+    },
+    {
+      "UserName": "Hans2",
+      "Password": "Test",
+      "ClientIdPrefix": "Test_",
+      "SubscriptionTopicLists": {
+        "BlacklistTopics": ["g", "h/+", "i/#"],
+        "WhitelistTopics": ["j", "k/+", "l/#"]
+      },
+      "PublishTopicLists": {
+        "BlacklistTopics": ["g", "h/+", "i/#"],
+        "WhitelistTopics": ["j", "k/+", "l/#"]
+      }
+    },
+    {
+      "UserName": "Hans3",
+      "Password": "Test",
+      "ValidateClientId": false,
+      "SubscriptionTopicLists": {
+        "BlacklistTopics": ["g", "h/+", "i/#"],
+        "WhitelistTopics": ["j", "k/+", "l/#"]
+      },
+      "PublishTopicLists": {
+        "BlacklistTopics": ["g", "h/+", "i/#"],
+        "WhitelistTopics": ["j", "k/+", "l/#"]
+      }
+    },
+    {
+      "UserName": "leo",
+      "Password": "leo123",
+      "ValidateClientId": false,
+      "SubscriptionTopicLists": {
+        "BlacklistTopics": [],
+        "WhitelistTopics": ["#"]
+      },
+      "PublishTopicLists": {
+        "BlacklistTopics": [],
+        "WhitelistTopics": ["#"]
+      }
+    }
+  ]
+}
