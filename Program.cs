@@ -18,7 +18,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to read configuration: {ex.Message}");
+            Log($"Failed to read configuration: {ex.Message}");
             return;
         }
         var mqttServerOptions = new MqttServerOptionsBuilder()
@@ -39,7 +39,7 @@ class Program
                 if (payload.IsEmpty || payload.Length == 0)
                 {
                     // Log the empty payload and skip processing
-                    Console.WriteLine("Received MQTT message with empty payload from " +
+                    Log("Received MQTT message with empty payload from " +
                                       $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing.");
                     context.ProcessPublish = false; // Skip processing
                     return;
@@ -49,19 +49,19 @@ class Program
 
                 if (envelope == null)
                 {
-                    Console.WriteLine("Received invalid ServiceEnvelope, skipping further processing.");
+                    Log("Received invalid ServiceEnvelope, skipping further processing.");
                     context.ProcessPublish = false; // Skip processing
                     return;
                 }
                 Data? data = DecryptEnvelope(envelope);
                 if (data?.Portnum == PortNum.TextMessageApp)
                 {
-                    Console.WriteLine($"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}");
+                    Log($"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to process MQTT message: {ex.Message}");
+                Log($"Failed to process MQTT message: {ex.Message}");
             }
             context.ProcessPublish = true;
             await Task.CompletedTask;
@@ -69,12 +69,12 @@ class Program
 
         mqttServer.ClientConnectedAsync += async context =>
         {
-            Console.WriteLine($"Client connected: {context.ClientId} with user {context.AuthenticationData} from {context.RemoteEndPoint}");
+            Log($"Client connected: {context.ClientId} with user {context.AuthenticationData} from {context.RemoteEndPoint}");
             await Task.CompletedTask;
         };
         mqttServer.ClientDisconnectedAsync += async context =>
         {
-            Console.WriteLine($"Client disconnected: {context.ClientId} from {context.RemoteEndPoint}");
+            Log($"Client disconnected: {context.ClientId} from {context.RemoteEndPoint}");
             await Task.CompletedTask;
         };
 
@@ -84,31 +84,31 @@ class Program
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (sender, eventArgs) =>
         {
-            Console.WriteLine("Shutdown requested (Ctrl+C pressed)...");
+            Log("Shutdown requested (Ctrl+C pressed)...");
             eventArgs.Cancel = true; // Prevent immediate process termination
             cts.Cancel();
         };
 
-        Console.WriteLine("About to start MQTT broker...");
+        Log("About to start MQTT broker...");
         try
         {
             await mqttServer.StartAsync();
-            Console.WriteLine($"MQTT broker started on port {config?.Port ?? 1883}.");
+            Log($"MQTT broker started on port {config?.Port ?? 1883}.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to start MQTT broker: {ex.Message}");
+            Log($"Failed to start MQTT broker: {ex.Message}");
             throw;
         }
-        Console.WriteLine("Press Ctrl+C to exit gracefully...");
+        Log("Press Ctrl+C to exit gracefully...");
         try
         {
             await Task.Delay(-1, cts.Token);
         }
         catch (TaskCanceledException) { }
-        Console.WriteLine("Stopping MQTT broker...");
+        Log("Stopping MQTT broker...");
         await mqttServer.StopAsync();
-        Console.WriteLine("MQTT broker stopped. Goodbye!");
+        Log("MQTT broker stopped. Goodbye!");
     }
 
     static Task ValidateConnection(ValidatingConnectionEventArgs args)
@@ -127,21 +127,21 @@ class Program
             if (currentUser is null)
             {
                 args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
-                Console.WriteLine($"User {args.UserName} not found in configuration.");
+                Log($"User {args.UserName} not found in configuration.");
                 return Task.CompletedTask;
             }
 
             if (args.UserName != currentUser.UserName)
             {
                 args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
-                Console.WriteLine($"User {args.UserName} is not authorized.");
+                Log($"User {args.UserName} is not authorized.");
                 return Task.CompletedTask;
             }
 
             if (args.Password != currentUser.Password)
             {
                 args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
-                Console.WriteLine($"Invalid password for user {args.UserName}.");
+                Log($"Invalid password for user {args.UserName}.");
                 return Task.CompletedTask;
             }
 
@@ -149,7 +149,7 @@ class Program
             {
                 args.ReasonCode = MqttConnectReasonCode.Success;
                 args.SessionItems.Add(args.ClientId, currentUser);
-                Console.WriteLine($"User {args.UserName} connected with client id {args.ClientId}.");
+                Log($"User {args.UserName} connected with client id {args.ClientId}.");
                 return Task.CompletedTask;
             }
 
@@ -158,7 +158,7 @@ class Program
                 if (args.ClientId != currentUser.ClientId)
                 {
                     args.ReasonCode = MqttConnectReasonCode.ClientIdentifierNotValid;
-                    Console.WriteLine($"Client id {args.ClientId} is not valid.");
+                    Log($"Client id {args.ClientId} is not valid.");
                     return Task.CompletedTask;
                 }
 
@@ -167,12 +167,12 @@ class Program
 
 
             args.ReasonCode = MqttConnectReasonCode.Success;
-            Console.WriteLine($"User {args.UserName} connected with client id {args.ClientId}.");
+            Log($"User {args.UserName} connected with client id {args.ClientId}.");
             return Task.CompletedTask;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred: {ex}");
+            Log($"An error occurred: {ex}");
             return Task.FromException(ex);
         }
     }
@@ -183,7 +183,7 @@ class Program
         ServiceEnvelope envelope = ServiceEnvelope.Parser.ParseFrom(payload);
         if (!IsValidEnvelope(envelope))
         {
-            Console.WriteLine("Received invalid ServiceEnvelope.");
+            Log("Received invalid ServiceEnvelope.");
             return null;
         }
         return envelope;
@@ -218,7 +218,7 @@ class Program
             }
             catch (Exception ex)
             {
-                //Console.WriteLine($"Failed to decrypt with key {key}: {ex.Message}");
+                //Log($"Failed to decrypt with key {key}: {ex.Message}");
             }
         }
 
@@ -247,6 +247,10 @@ class Program
 
     }
 
+    public static void Log(string message)
+    {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
+    }
 }
 
 
