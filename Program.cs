@@ -10,6 +10,7 @@ namespace MeshQTT;
 class Program
 {
     private static Config? config = new Config();
+    private static List<Node> nodes = new List<Node>();
 
     static async Task Main(string[] args)
     {
@@ -22,6 +23,7 @@ class Program
             Log($"Failed to read configuration: {ex.Message}");
             return;
         }
+
         var mqttServerOptions = new MqttServerOptionsBuilder()
             .WithDefaultEndpoint()
             .WithDefaultEndpointBoundIPAddress(System.Net.IPAddress.Any)
@@ -29,46 +31,6 @@ class Program
             .Build();
 
         using var mqttServer = new MqttServerFactory().CreateMqttServer(mqttServerOptions);
-
-        mqttServer.InterceptingPublishAsync += async context =>
-        {
-            try
-            {
-                var payload = context.ApplicationMessage.Payload;
-                if (payload.IsEmpty || payload.Length == 0)
-                {
-                    // Log the empty payload and skip processing
-                    Log(
-                        "Received MQTT message with empty payload from "
-                            + $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing."
-                    );
-                    context.ProcessPublish = false; // Skip processing
-                    return;
-                }
-                // Process the payload
-                ServiceEnvelope? envelope = ProcessMeshtasticPayload(payload);
-
-                if (envelope == null)
-                {
-                    Log("Received invalid ServiceEnvelope, skipping further processing.");
-                    context.ProcessPublish = false; // Skip processing
-                    return;
-                }
-                Data? data = DecryptEnvelope(envelope);
-                if (data?.Portnum == PortNum.TextMessageApp)
-                {
-                    Log(
-                        $"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}"
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"Failed to process MQTT message: {ex.Message}");
-            }
-            context.ProcessPublish = true;
-            await Task.CompletedTask;
-        };
 
         mqttServer.ClientConnectedAsync += async context =>
         {
@@ -82,7 +44,7 @@ class Program
             Log($"Client disconnected: {context.ClientId} from {context.RemoteEndPoint}");
             await Task.CompletedTask;
         };
-
+        mqttServer.InterceptingPublishAsync += InterceptingPublishAsync;
         mqttServer.ValidatingConnectionAsync += ValidateConnection;
 
         var cts = new CancellationTokenSource();
@@ -113,6 +75,107 @@ class Program
         Log("Stopping MQTT broker...");
         await mqttServer.StopAsync();
         Log("MQTT broker stopped. Goodbye!");
+    }
+
+    static async Task InterceptingPublishAsync(InterceptingPublishEventArgs context)
+    {
+        try
+        {
+            var payload = context.ApplicationMessage.Payload;
+            if (payload.IsEmpty || payload.Length == 0)
+            {
+                // Log the empty payload and skip processing
+                Log(
+                    "Received MQTT message with empty payload from "
+                        + $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing."
+                );
+                context.ProcessPublish = false; // Skip processing
+                return;
+            }
+            // Process the payload
+            ServiceEnvelope? envelope = ProcessMeshtasticPayload(payload);
+
+            if (envelope == null)
+            {
+                Log("Received invalid ServiceEnvelope, skipping further processing.");
+                context.ProcessPublish = false; // Skip processing
+                return;
+            }
+            MeshPacket? data = DecryptEnvelope(envelope);
+            // Last part of the topic is the NodeID
+            string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
+            if (data?.Decoded.Portnum == PortNum.TextMessageApp)
+            {
+                Log(
+                    $"Received text message from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Decoded.Payload.ToStringUtf8()}"
+                );
+            }
+            else if (data?.Decoded.Portnum == PortNum.PositionApp)
+            {
+                Position position = Position.Parser.ParseFrom(data.Decoded.Payload);
+                double Latitude = position.LatitudeI * 1e-7;
+                double Longitude = position.LongitudeI * 1e-7;
+
+                // Update or create node
+                Node? node = nodes.FirstOrDefault(n => n.NodeID == nodeID);
+                if (node == null)
+                {
+                    node = new Node(nodeID);
+                    nodes.Add(node);
+                }
+                else
+                {
+                    if (
+                        !(
+                            node.LastUpdate.AddMinutes(config?.PositionAppTimeoutMinutes ?? 720)
+                                < DateTime.Now
+                            || node.GetDistanceTo(Latitude, Longitude) > 100
+                        )
+                    )
+                    // Update only if the last update was more than 12 hours ago or if the position has changed significantly
+                    {
+                        Log(
+                            $"Node {nodeID} position update ignored due to insufficient change or recent update."
+                        );
+                        context.ProcessPublish = false;
+                        return;
+                    }
+                    node.LastLatitude = Latitude;
+                    node.LastLongitude = Longitude;
+                    node.LastUpdate = DateTime.Now;
+                }
+
+                Log(
+                    $"Received location data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {Latitude}, {Longitude} (accuracy: {position.VDOP} m)"
+                );
+            }
+            else if (data?.Decoded.Portnum == PortNum.NodeinfoApp)
+            {
+                NodeInfo nodeInfo = NodeInfo.Parser.ParseFrom(data.Decoded.Payload);
+                Log(
+                    $"Received node info from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {nodeInfo.User} (Channel: {nodeInfo.Channel}, version: {nodeInfo.Num})"
+                );
+            }
+            else if (data?.Decoded.Portnum == PortNum.TelemetryApp)
+            {
+                Telemetry telemetry = Telemetry.Parser.ParseFrom(data.Decoded.Payload);
+                Log(
+                    $"Received telemetry data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: AirUtilTx: {telemetry.DeviceMetrics.AirUtilTx}, ChannelUtilization: {telemetry.DeviceMetrics.ChannelUtilization}"
+                );
+            }
+            else
+            {
+                Log(
+                    $"Received packet from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId} with port {data?.Decoded.Portnum}: {data?.Decoded.Payload.ToStringUtf8()}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to process MQTT message: {ex.Message}");
+        }
+        context.ProcessPublish = true;
+        await Task.CompletedTask;
     }
 
     static Task ValidateConnection(ValidatingConnectionEventArgs args)
@@ -204,7 +267,7 @@ class Program
         );
     }
 
-    static Data? DecryptEnvelope(ServiceEnvelope envelope)
+    static MeshPacket? DecryptEnvelope(ServiceEnvelope envelope)
     {
         // Try to decrypt with all available keys
         foreach (var key in config?.EncryptionKeys ?? [])
@@ -220,12 +283,19 @@ class Program
                     keyBytes
                 );
                 payload = Data.Parser.ParseFrom(decrypted);
+                MeshPacket meshPacket = new MeshPacket
+                {
+                    From = envelope.Packet.From,
+                    To = envelope.Packet.To,
+                    Id = envelope.Packet.Id,
+                    Decoded = payload,
+                };
                 if (
                     payload != null
                     && payload.Portnum > PortNum.UnknownApp
                     && payload.Payload.Length > 0
                 )
-                    return payload;
+                    return meshPacket;
             }
             catch (Exception ex)
             {

@@ -54,5 +54,6 @@
       }
     }
   ],
-  "EncryptionKeys": ["AQ=="]
+  "EncryptionKeys": ["AQ=="],
+  "PositionAppTimeoutMinutes": 720
 }
