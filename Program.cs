@@ -1,4 +1,7 @@
-﻿using Meshtastic;
+﻿using System.Buffers;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Meshtastic;
 using Meshtastic.Cli.Extensions;
 using Meshtastic.Crypto;
 using Meshtastic.Protobufs;
@@ -104,6 +107,69 @@ class Program
         try
         {
             var payload = context.ApplicationMessage.Payload;
+            Dictionary<string, object>? PacketJson;
+            try
+            {
+                PacketJson = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                    context.ApplicationMessage.Payload.ToArray()
+                );
+            }
+            catch
+            {
+                PacketJson = null;
+            }
+            if (PacketJson is not null)
+            {
+                if (PacketJson["type"] == "position")
+                {
+                    var payloadObj = PacketJson["payload"] as JsonElement?;
+                    if (payloadObj.HasValue)
+                    {
+                        double Latitude =
+                            payloadObj.Value.GetProperty("latitude_i").GetInt32() * 1e-7;
+                        double Longitude =
+                            payloadObj.Value.GetProperty("longitude_i").GetInt32() * 1e-7;
+
+                        // Update or create node
+                        Node? node = nodes.FirstOrDefault(n =>
+                            n.NodeID == payloadObj.Value.GetProperty("sender").GetString()
+                        );
+                        if (node == null)
+                        {
+                            var senderId = payloadObj.Value.GetProperty("sender").GetString();
+                            if (string.IsNullOrEmpty(senderId))
+                            {
+                                Log(
+                                    "Sender ID is null or empty in position payload, skipping node creation."
+                                );
+                                context.ProcessPublish = false;
+                                return;
+                            }
+                            node = new Node(senderId);
+                            nodes.Add(node);
+                        }
+                        else
+                        {
+                            if (
+                                !(
+                                    node.LastUpdate.AddMinutes(
+                                        config?.PositionAppTimeoutMinutes ?? 720
+                                    ) < DateTime.Now
+                                    || node.GetDistanceTo(Latitude, Longitude) > 100
+                                )
+                            )
+                            // Update only if the last update was more than 12 hours ago or if the position has changed significantly
+                            {
+                                Log(
+                                    $"Node {payloadObj.Value.GetProperty("sender").GetString()} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(Latitude, Longitude)} m"
+                                );
+                                context.ProcessPublish = false;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
             if (payload.IsEmpty || payload.Length == 0)
             {
                 // Log the empty payload and skip processing
@@ -135,8 +201,8 @@ class Program
             else if (data?.Decoded.Portnum == PortNum.PositionApp)
             {
                 Position position = Position.Parser.ParseFrom(data.Decoded.Payload);
-                double Latitude = position.LatitudeI * 1e-7;
-                double Longitude = position.LongitudeI * 1e-7;
+                double latitude = position.LatitudeI * 1e-7;
+                double longitude = position.LongitudeI * 1e-7;
 
                 // Update or create node
                 Node? node = nodes.FirstOrDefault(n => n.NodeID == nodeID);
@@ -151,24 +217,24 @@ class Program
                         !(
                             node.LastUpdate.AddMinutes(config?.PositionAppTimeoutMinutes ?? 720)
                                 < DateTime.Now
-                            || node.GetDistanceTo(Latitude, Longitude) > 100
+                            || node.GetDistanceTo(latitude, longitude) > 100
                         )
                     )
                     // Update only if the last update was more than 12 hours ago or if the position has changed significantly
                     {
                         Log(
-                            $"Node {nodeID} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(Latitude, Longitude)} m"
+                            $"Node {nodeID} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(latitude, longitude)} m"
                         );
                         context.ProcessPublish = false;
                         return;
                     }
-                    node.LastLatitude = Latitude;
-                    node.LastLongitude = Longitude;
+                    node.LastLatitude = latitude;
+                    node.LastLongitude = longitude;
                     node.LastUpdate = DateTime.Now;
                 }
 
                 Log(
-                    $"Received location data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {Latitude}, {Longitude} (accuracy: {position.VDOP} m)"
+                    $"Received location data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {latitude}, {longitude} (accuracy: {position.VDOP} m)"
                 );
             }
             else if (data?.Decoded.Portnum == PortNum.NodeinfoApp)
