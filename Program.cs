@@ -1,15 +1,16 @@
-﻿using MQTTnet.Server;
-using Meshtastic;
-using Meshtastic.Protobufs;
-using Meshtastic.Crypto;
-using MQTTnet.Protocol;
+﻿using Meshtastic;
 using Meshtastic.Cli.Extensions;
+using Meshtastic.Crypto;
+using Meshtastic.Protobufs;
+using MQTTnet.Protocol;
+using MQTTnet.Server;
 
 namespace MeshQTT;
 
 class Program
 {
     private static Config? config = new Config();
+
     static async Task Main(string[] args)
     {
         try
@@ -27,9 +28,7 @@ class Program
             .WithDefaultEndpointPort(config?.Port ?? 1883)
             .Build();
 
-        using var mqttServer = new MqttServerFactory().CreateMqttServer(
-            mqttServerOptions
-        );
+        using var mqttServer = new MqttServerFactory().CreateMqttServer(mqttServerOptions);
 
         mqttServer.InterceptingPublishAsync += async context =>
         {
@@ -39,8 +38,10 @@ class Program
                 if (payload.IsEmpty || payload.Length == 0)
                 {
                     // Log the empty payload and skip processing
-                    Log("Received MQTT message with empty payload from " +
-                                      $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing.");
+                    Log(
+                        "Received MQTT message with empty payload from "
+                            + $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing."
+                    );
                     context.ProcessPublish = false; // Skip processing
                     return;
                 }
@@ -56,7 +57,9 @@ class Program
                 Data? data = DecryptEnvelope(envelope);
                 if (data?.Portnum == PortNum.TextMessageApp)
                 {
-                    Log($"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}");
+                    Log(
+                        $"Received text message from {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Payload.ToStringUtf8()}"
+                    );
                 }
             }
             catch (Exception ex)
@@ -69,7 +72,9 @@ class Program
 
         mqttServer.ClientConnectedAsync += async context =>
         {
-            Log($"Client connected: {context.ClientId} with user {context.AuthenticationData} from {context.RemoteEndPoint}");
+            Log(
+                $"Client connected: {context.ClientId} with user {context.AuthenticationData} from {context.RemoteEndPoint}"
+            );
             await Task.CompletedTask;
         };
         mqttServer.ClientDisconnectedAsync += async context =>
@@ -79,7 +84,6 @@ class Program
         };
 
         mqttServer.ValidatingConnectionAsync += ValidateConnection;
-
 
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (sender, eventArgs) =>
@@ -120,7 +124,6 @@ class Program
                 args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
                 return Task.CompletedTask;
             }
-
 
             var currentUser = config?.Users.FirstOrDefault(u => u.UserName == args.UserName);
 
@@ -165,7 +168,6 @@ class Program
                 args.SessionItems.Add(currentUser.ClientId, currentUser);
             }
 
-
             args.ReasonCode = MqttConnectReasonCode.Success;
             Log($"User {args.UserName} connected with client id {args.ClientId}.");
             return Task.CompletedTask;
@@ -187,18 +189,19 @@ class Program
             return null;
         }
         return envelope;
-
     }
 
     static bool IsValidEnvelope(ServiceEnvelope envelope)
     {
         // Implement your validation logic here
         // For example, check if the envelope has a valid type and data
-        return !(String.IsNullOrEmpty(envelope.GatewayId) ||
-         String.IsNullOrEmpty(envelope.ChannelId) ||
-        envelope.Packet == null ||
-        envelope.Packet.Id < 0 ||
-        envelope.Packet.Decoded != null);
+        return !(
+            String.IsNullOrEmpty(envelope.GatewayId)
+            || String.IsNullOrEmpty(envelope.ChannelId)
+            || envelope.Packet == null
+            || envelope.Packet.Id < 0
+            || envelope.Packet.Decoded != null
+        );
     }
 
     static Data? DecryptEnvelope(ServiceEnvelope envelope)
@@ -211,9 +214,17 @@ class Program
             {
                 var nonce = new NonceGenerator(envelope.Packet.From, envelope.Packet.Id).Create();
                 var keyBytes = System.Convert.FromBase64String(key);
-                var decrypted = PacketEncryption.TransformPacket(envelope.Packet.Encrypted.ToByteArray(), nonce, keyBytes);
+                var decrypted = PacketEncryption.TransformPacket(
+                    envelope.Packet.Encrypted.ToByteArray(),
+                    nonce,
+                    keyBytes
+                );
                 payload = Data.Parser.ParseFrom(decrypted);
-                if (payload != null && payload.Portnum > PortNum.UnknownApp && payload.Payload.Length > 0)
+                if (
+                    payload != null
+                    && payload.Portnum > PortNum.UnknownApp
+                    && payload.Payload.Length > 0
+                )
                     return payload;
             }
             catch (Exception ex)
@@ -238,13 +249,9 @@ class Program
                 config = System.Text.Json.JsonSerializer.Deserialize<Config>(json) ?? new();
             }
 
-
-
             return config;
         }
         throw new FileNotFoundException("Configuration file not found.", filePath);
-
-
     }
 
     public static void Log(string message)
@@ -252,5 +259,3 @@ class Program
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
     }
 }
-
-
