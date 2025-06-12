@@ -135,7 +135,7 @@ class Program
                     // Update only if the last update was more than 12 hours ago or if the position has changed significantly
                     {
                         Log(
-                            $"Node {nodeID} position update ignored due to insufficient change or recent update."
+                            $"Node {nodeID} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(Latitude, Longitude)} m"
                         );
                         context.ProcessPublish = false;
                         return;
@@ -161,12 +161,6 @@ class Program
                 Telemetry telemetry = Telemetry.Parser.ParseFrom(data.Decoded.Payload);
                 Log(
                     $"Received telemetry data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: AirUtilTx: {telemetry.DeviceMetrics.AirUtilTx}, ChannelUtilization: {telemetry.DeviceMetrics.ChannelUtilization}"
-                );
-            }
-            else
-            {
-                Log(
-                    $"Received packet from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId} with port {data?.Decoded.Portnum}: {data?.Decoded.Payload.ToStringUtf8()}"
                 );
             }
         }
