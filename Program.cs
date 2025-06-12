@@ -4,6 +4,7 @@ using Meshtastic.Crypto;
 using Meshtastic.Protobufs;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
+using Prometheus;
 
 namespace MeshQTT;
 
@@ -12,8 +13,27 @@ class Program
     private static Config? config = new Config();
     private static List<Node> nodes = new List<Node>();
 
+    // Prometheus metrics
+    private static readonly Counter MessagesReceived = Metrics.CreateCounter(
+        "mqtt_messages_received_total",
+        "Total number of MQTT messages received."
+    );
+    private static readonly Counter MessagesFiltered = Metrics.CreateCounter(
+        "mqtt_messages_filtered_total",
+        "Total number of MQTT messages filtered due to empty payload or invalid data."
+    );
+    private static readonly Gauge ClientsConnected = Metrics.CreateGauge(
+        "mqtt_clients_connected_total",
+        "Total number of MQTT clients connected."
+    );
+
     static async Task Main(string[] args)
     {
+        // Start Prometheus metrics server on port 9000
+        var metricServer = new MetricServer(port: 9000, hostname: "localhost");
+        metricServer.Start();
+        Log("Prometheus metrics server started on http://localhost:9000/metrics");
+
         try
         {
             config = ReadConfiguration(AppContext.BaseDirectory);
@@ -34,6 +54,7 @@ class Program
 
         mqttServer.ClientConnectedAsync += async context =>
         {
+            ClientsConnected.Inc();
             Log(
                 $"Client connected: {context.ClientId} with user {context.AuthenticationData} from {context.RemoteEndPoint}"
             );
@@ -41,6 +62,7 @@ class Program
         };
         mqttServer.ClientDisconnectedAsync += async context =>
         {
+            ClientsConnected.Dec();
             Log($"Client disconnected: {context.ClientId} from {context.RemoteEndPoint}");
             await Task.CompletedTask;
         };
