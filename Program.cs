@@ -11,7 +11,9 @@ namespace MeshQTT
 {
     public class Program
     {
-        private static Entities.Config? config = new();
+        private static Entities.Config? config = new(
+            Path.Combine(AppContext.BaseDirectory, "config", "config.json")
+        );
         private static readonly List<Node> nodes = [];
 
         // Prometheus metrics
@@ -31,16 +33,6 @@ namespace MeshQTT
         static async Task Main(string[] args)
         {
             StartPrometheusMetricsServer();
-
-            try
-            {
-                config = ReadConfiguration(AppContext.BaseDirectory);
-            }
-            catch (Exception ex)
-            {
-                Log($"Failed to read configuration: {ex.Message}");
-                return;
-            }
 
             var mqttServerOptions = new MqttServerOptionsBuilder()
                 .WithDefaultEndpoint()
@@ -401,43 +393,6 @@ namespace MeshQTT
             }
 
             return null;
-        }
-
-        private static Entities.Config? ReadConfiguration(string currentPath)
-        {
-            var filePath = $"{currentPath}/config/config.json";
-
-            if (File.Exists(filePath))
-            {
-                Entities.Config config;
-                using (var r = new StreamReader(filePath))
-                {
-                    var json = r.ReadToEnd();
-                    config =
-                        System.Text.Json.JsonSerializer.Deserialize<Entities.Config>(json) ?? new();
-                }
-
-                return config;
-            }
-            // List all files in the directory
-            var files = Directory.GetFiles(
-                $"{currentPath}/config",
-                "*",
-                SearchOption.AllDirectories
-            );
-            if (files.Length > 0)
-            {
-                Log($"Configuration file not found at {filePath}. Found files:");
-                foreach (var file in files)
-                {
-                    Log($"- {file}");
-                }
-            }
-            else
-            {
-                Log("No JSON configuration files found in the directory.");
-            }
-            throw new FileNotFoundException("Configuration file not found.", filePath);
         }
 
         public static void Log(string message)
