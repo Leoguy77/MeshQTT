@@ -30,15 +30,7 @@ namespace MeshQTT
 
         static async Task Main(string[] args)
         {
-            // if debug prometheus need hostname: "localhost"
-#if DEBUG
-            var metricServer = new MetricServer(port: 9000, hostname: "localhost");
-            Log("Prometheus metrics server started on http://localhost:9000/metrics");
-#else
-            var metricServer = new MetricServer(port: 9000);
-            Log("Prometheus metrics server started on http://0.0.0.0:9000/metrics");
-#endif
-            metricServer.Start();
+            StartPrometheusMetricsServer();
 
             try
             {
@@ -103,6 +95,19 @@ namespace MeshQTT
             Log("Stopping MQTT broker...");
             await mqttServer.StopAsync();
             Log("MQTT broker stopped. Goodbye!");
+        }
+
+        private static void StartPrometheusMetricsServer()
+        {
+            // if debug prometheus need hostname: "localhost"
+#if DEBUG
+            var metricServer = new MetricServer(port: 9000, hostname: "localhost");
+            Log("Prometheus metrics server started on http://localhost:9000/metrics");
+#else
+            var metricServer = new MetricServer(port: 9000);
+            Log("Prometheus metrics server started on http://0.0.0.0:9000/metrics");
+#endif
+            metricServer.Start();
         }
 
         static async Task InterceptingPublishAsync(InterceptingPublishEventArgs context)
