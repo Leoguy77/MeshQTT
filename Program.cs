@@ -1,8 +1,5 @@
 ﻿using System.Buffers;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using Meshtastic;
-using Meshtastic.Cli.Extensions;
 using Meshtastic.Crypto;
 using Meshtastic.Protobufs;
 using MQTTnet.Protocol;
@@ -35,7 +32,6 @@ class Program
         // if debug prometheus need hostname: "localhost"
 #if DEBUG
         var metricServer = new MetricServer(port: 9000, hostname: "localhost");
-        metricServer.Start();
         Log("Prometheus metrics server started on http://localhost:9000/metrics");
 #else
         var metricServer = new MetricServer(port: 9000);
@@ -385,7 +381,7 @@ class Program
                 )
                     return meshPacket;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //Log($"Failed to decrypt with key {key}: {ex.Message}");
             }
