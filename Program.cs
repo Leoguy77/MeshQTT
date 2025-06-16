@@ -32,10 +32,16 @@ class Program
 
     static async Task Main(string[] args)
     {
-        // Start Prometheus metrics server on port 9000
+        // if debug prometheus need hostname: "localhost"
+#if DEBUG
         var metricServer = new MetricServer(port: 9000, hostname: "localhost");
         metricServer.Start();
         Log("Prometheus metrics server started on http://localhost:9000/metrics");
+#else
+        var metricServer = new MetricServer(port: 9000);
+        Log("Prometheus metrics server started on http://0.0.0.0:9000/metrics");
+#endif
+        metricServer.Start();
 
         try
         {
