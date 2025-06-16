@@ -1,17 +1,17 @@
-﻿using MeshQTT.Entities;
+﻿using System.Buffers;
+using System.Text.Json;
+using MeshQTT.Entities;
 using Meshtastic.Crypto;
 using Meshtastic.Protobufs;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using Prometheus;
-using System.Buffers;
-using System.Text.Json;
 
 namespace MeshQTT
 {
     public class Program
     {
-        private static Config? config = new();
+        private static Entities.Config? config = new();
         private static readonly List<Node> nodes = [];
 
         // Prometheus metrics
@@ -31,13 +31,13 @@ namespace MeshQTT
         static async Task Main(string[] args)
         {
             // if debug prometheus need hostname: "localhost"
-        #if DEBUG
+#if DEBUG
             var metricServer = new MetricServer(port: 9000, hostname: "localhost");
             Log("Prometheus metrics server started on http://localhost:9000/metrics");
-        #else
+#else
             var metricServer = new MetricServer(port: 9000);
             Log("Prometheus metrics server started on http://0.0.0.0:9000/metrics");
-        #endif
+#endif
             metricServer.Start();
 
             try
@@ -123,7 +123,10 @@ namespace MeshQTT
                 }
                 if (PacketJson is not null)
                 {
-                    if (PacketJson.TryGetValue("type", out var value) && value as string == "position")
+                    if (
+                        PacketJson.TryGetValue("type", out var value)
+                        && value as string == "position"
+                    )
                     {
                         var payloadObj = value as JsonElement?;
                         if (payloadObj.HasValue)
@@ -327,7 +330,9 @@ namespace MeshQTT
             }
         }
 
-        static ServiceEnvelope? ProcessMeshtasticPayload(System.Buffers.ReadOnlySequence<byte> payload)
+        static ServiceEnvelope? ProcessMeshtasticPayload(
+            System.Buffers.ReadOnlySequence<byte> payload
+        )
         {
             // Implement your Meshtastic payload processing logic here
             ServiceEnvelope envelope = ServiceEnvelope.Parser.ParseFrom(payload);
@@ -359,7 +364,10 @@ namespace MeshQTT
             {
                 try
                 {
-                    var nonce = new NonceGenerator(envelope.Packet.From, envelope.Packet.Id).Create();
+                    var nonce = new NonceGenerator(
+                        envelope.Packet.From,
+                        envelope.Packet.Id
+                    ).Create();
                     var keyBytes = System.Convert.FromBase64String(key);
                     var decrypted = PacketEncryption.TransformPacket(
                         envelope.Packet.Encrypted.ToByteArray(),
@@ -390,23 +398,28 @@ namespace MeshQTT
             return null;
         }
 
-        private static Config? ReadConfiguration(string currentPath)
+        private static Entities.Config? ReadConfiguration(string currentPath)
         {
             var filePath = $"{currentPath}/config/config.json";
 
             if (File.Exists(filePath))
             {
-                Config config;
+                Entities.Config config;
                 using (var r = new StreamReader(filePath))
                 {
                     var json = r.ReadToEnd();
-                    config = System.Text.Json.JsonSerializer.Deserialize<Config>(json) ?? new();
+                    config =
+                        System.Text.Json.JsonSerializer.Deserialize<Entities.Config>(json) ?? new();
                 }
 
                 return config;
             }
             // List all files in the directory
-            var files = Directory.GetFiles($"{currentPath}/config", "*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(
+                $"{currentPath}/config",
+                "*",
+                SearchOption.AllDirectories
+            );
             if (files.Length > 0)
             {
                 Log($"Configuration file not found at {filePath}. Found files:");
@@ -427,5 +440,4 @@ namespace MeshQTT
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
         }
     }
-
 }
