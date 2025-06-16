@@ -1,0 +1,10 @@
+services:
+  meshqtt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "1883:1883" # MQTT port
+      - "9000:9000" #Metrics port
+    volumes:
+      - ./config:/App/config
