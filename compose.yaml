@@ -7,8 +7,8 @@ services:
       - "1883:1883" # MQTT port
       - "9000:9000" #Metrics port
     volumes:
-      - ./config:/App/config
-      - ./logs:/App/logs
+      - ./config:/App/config:rw
+      - ./logs:/App/logs:rw
 
   fail2ban:
     image: crazymax/fail2ban:latest

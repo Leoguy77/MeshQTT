@@ -20,6 +20,10 @@ namespace MeshQTT.Entities
         public int PositionAppTimeoutMinutes { get; set; }
 
         private FileSystemWatcher? _fileWatcher = null;
+        private Timer? _pollingTimer = null;
+        private DateTime _lastWriteTime;
+        private readonly string? _filePath;
+        private readonly object _reloadLock = new();
 
         public Config()
         {
@@ -44,50 +48,74 @@ namespace MeshQTT.Entities
                     EncryptionKeys = config.EncryptionKeys;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
 
+                    // FileSystemWatcher (may not work in Docker Desktop)
                     var configPath = Path.Combine(AppContext.BaseDirectory, "config");
                     _fileWatcher = new FileSystemWatcher($"{configPath}", "*.json");
                     _fileWatcher.Changed += (sender, e) =>
                     {
                         if (e.FullPath == filePath)
                         {
-                            const int maxRetries = 5;
-                            const int delayMs = 100;
-                            int retries = 0;
-                            while (retries < maxRetries)
-                            {
-                                try
-                                {
-                                    using var reader = new StreamReader(filePath);
-                                    var updatedJson = reader.ReadToEnd();
-                                    var updatedConfig =
-                                        System.Text.Json.JsonSerializer.Deserialize<Config>(
-                                            updatedJson
-                                        );
-                                    if (updatedConfig != null)
-                                    {
-                                        Port = updatedConfig.Port;
-                                        Users = updatedConfig.Users;
-                                        EncryptionKeys = updatedConfig.EncryptionKeys;
-                                        PositionAppTimeoutMinutes =
-                                            updatedConfig.PositionAppTimeoutMinutes;
-                                    }
-                                    Console.WriteLine("Reloaded config");
-                                    break;
-                                }
-                                catch (IOException)
-                                {
-                                    retries++;
-                                    Thread.Sleep(delayMs);
-                                }
-                            }
+                            ReloadConfigWithRetry(filePath);
                         }
                     };
                     _fileWatcher.EnableRaisingEvents = true;
+
+                    // Polling fallback for Docker Desktop
+                    _filePath = filePath;
+                    _lastWriteTime = File.GetLastWriteTimeUtc(filePath);
+                    _pollingTimer = new Timer(_ => PollConfigFile(), null, 1000, 1000); // every 1s
                 }
             }
             else
             {
                 throw new FileNotFoundException("Configuration file not found.", filePath);
+            }
+        }
+
+        private void PollConfigFile()
+        {
+            if (_filePath == null)
+                return;
+            var currentWriteTime = File.GetLastWriteTimeUtc(_filePath);
+            if (currentWriteTime != _lastWriteTime)
+            {
+                _lastWriteTime = currentWriteTime;
+                ReloadConfigWithRetry(_filePath);
+            }
+        }
+
+        private void ReloadConfigWithRetry(string filePath)
+        {
+            lock (_reloadLock)
+            {
+                const int maxRetries = 5;
+                const int delayMs = 100;
+                int retries = 0;
+                while (retries < maxRetries)
+                {
+                    try
+                    {
+                        using var reader = new StreamReader(filePath);
+                        var updatedJson = reader.ReadToEnd();
+                        var updatedConfig = System.Text.Json.JsonSerializer.Deserialize<Config>(
+                            updatedJson
+                        );
+                        if (updatedConfig != null)
+                        {
+                            Port = updatedConfig.Port;
+                            Users = updatedConfig.Users;
+                            EncryptionKeys = updatedConfig.EncryptionKeys;
+                            PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;
+                        }
+                        Console.WriteLine("Reloaded config (polling)");
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        retries++;
+                        Thread.Sleep(delayMs);
+                    }
+                }
             }
         }
     }
