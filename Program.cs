@@ -106,6 +106,7 @@ namespace MeshQTT
         {
             try
             {
+                MessagesReceived.Inc();
                 var payload = context.ApplicationMessage.Payload;
                 Dictionary<string, object>? PacketJson;
                 try
@@ -145,6 +146,7 @@ namespace MeshQTT
                                     Log(
                                         "Sender ID is null or empty in position payload, skipping node creation."
                                     );
+                                    MessagesFiltered.Inc();
                                     context.ProcessPublish = false;
                                     return;
                                 }
@@ -166,6 +168,7 @@ namespace MeshQTT
                                     Log(
                                         $"Node {payloadObj.Value.GetProperty("sender").GetString()} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(Latitude, Longitude)} m"
                                     );
+                                    MessagesFiltered.Inc();
                                     context.ProcessPublish = false;
                                     return;
                                 }
@@ -180,6 +183,7 @@ namespace MeshQTT
                         "Received MQTT message with empty payload from "
                             + $"{context.ClientId} on topic {context.ApplicationMessage.Topic} - skipping processing."
                     );
+                    MessagesFiltered.Inc();
                     context.ProcessPublish = false; // Skip processing
                     return;
                 }
@@ -189,6 +193,7 @@ namespace MeshQTT
                 if (envelope == null)
                 {
                     Log("Received invalid ServiceEnvelope, skipping further processing.");
+                    MessagesFiltered.Inc();
                     context.ProcessPublish = false; // Skip processing
                     return;
                 }
@@ -228,6 +233,7 @@ namespace MeshQTT
                             Log(
                                 $"Node {nodeID} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(latitude, longitude)} m"
                             );
+                            MessagesFiltered.Inc();
                             context.ProcessPublish = false;
                             return;
                         }
