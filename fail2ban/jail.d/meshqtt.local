@@ -1,0 +1,8 @@
+[meshqtt]
+enabled = true
+filter = meshqtt
+logpath = /logs/app.log
+maxretry = 5
+findtime = 600
+bantime = 3600
+action = iptables-allports[name=meshqtt]

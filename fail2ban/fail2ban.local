@@ -1,0 +1,4 @@
+[DEFAULT]
+dbfile = /data/fail2ban.sqlite3
+loglevel = INFO
+logtarget = /data/fail2ban.log

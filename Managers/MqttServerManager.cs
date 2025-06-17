@@ -80,6 +80,7 @@ namespace MeshQTT.Managers
                 if (string.IsNullOrWhiteSpace(args.UserName))
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
+                    Logger.Log($"Failed login from {args.RemoteEndPoint} (reason: empty username)");
                     return Task.CompletedTask;
                 }
 
@@ -88,21 +89,27 @@ namespace MeshQTT.Managers
                 if (currentUser is null)
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
-                    Logger.Log($"User {args.UserName} not found in configuration.");
+                    Logger.Log(
+                        $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not found)"
+                    );
                     return Task.CompletedTask;
                 }
 
                 if (args.UserName != currentUser.UserName)
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
-                    Logger.Log($"User {args.UserName} is not authorized.");
+                    Logger.Log(
+                        $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not authorized)"
+                    );
                     return Task.CompletedTask;
                 }
 
                 if (args.Password != currentUser.Password)
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
-                    Logger.Log($"Invalid password for user {args.UserName}.");
+                    Logger.Log(
+                        $"Failed login from {args.RemoteEndPoint} (reason: invalid password for user {args.UserName})"
+                    );
                     return Task.CompletedTask;
                 }
 

@@ -8,3 +8,19 @@ services:
       - "9000:9000" #Metrics port
     volumes:
       - ./config:/App/config
+      - ./logs:/App/logs
+
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    restart: unless-stopped
+    volumes:
+      - ./logs:/logs:ro
+      - ./fail2ban/jail.d:/data/jail.d:ro
+      - ./fail2ban/filter.d:/data/filter.d:ro
+      - ./fail2ban/action.d:/data/action.d:ro
+      - ./fail2ban/fail2ban.local:/data/fail2ban.local:ro
+    network_mode: "service:meshqtt"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
