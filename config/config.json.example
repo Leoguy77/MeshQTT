@@ -1,5 +1,6 @@
 {
   "Port": 1883,
+  "Banlist": [],
   "Users": [
     {
       "UserName": "Hans",
