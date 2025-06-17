@@ -47,6 +47,13 @@ namespace MeshQTT.Managers
                 }
                 MeshPacket? data = DecryptEnvelope(envelope);
                 string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
+                if (config != null && config.Banlist.Contains(nodeID))
+                {
+                    Logger.Log($"Blocked message from banned node {nodeID}.");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    return;
+                }
                 switch (data?.Decoded.Portnum)
                 {
                     case PortNum.TextMessageApp:

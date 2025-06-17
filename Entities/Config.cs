@@ -17,6 +17,11 @@ namespace MeshQTT.Entities
         /// </summary>
         public List<string> EncryptionKeys { get; set; } = [];
 
+        /// <summary>
+        /// Gets or sets the list of banned node IDs.
+        /// </summary>
+        public List<string> Banlist { get; set; } = [];
+
         public int PositionAppTimeoutMinutes { get; set; }
 
         private FileSystemWatcher? _fileWatcher = null;
@@ -31,6 +36,7 @@ namespace MeshQTT.Entities
             Port = 1883;
             Users = new List<User>();
             EncryptionKeys = new List<string>();
+            Banlist = new List<string>();
             PositionAppTimeoutMinutes = 30; // Default timeout in minutes
         }
 
@@ -46,6 +52,7 @@ namespace MeshQTT.Entities
                     Port = config.Port;
                     Users = config.Users;
                     EncryptionKeys = config.EncryptionKeys;
+                    Banlist = config.Banlist;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
 
                     // FileSystemWatcher (may not work in Docker Desktop)
@@ -105,6 +112,7 @@ namespace MeshQTT.Entities
                             Port = updatedConfig.Port;
                             Users = updatedConfig.Users;
                             EncryptionKeys = updatedConfig.EncryptionKeys;
+                            Banlist = updatedConfig.Banlist;
                             PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;
                         }
                         Console.WriteLine("Reloaded config (polling)");
