@@ -10,11 +10,15 @@ namespace MeshQTT.Managers
     {
         private readonly List<Node> nodes;
         private readonly MeshQTT.Entities.Config? config;
+        private readonly NodeManager nodeManager;
+        private readonly PayloadHandler payloadHandler;
 
         public MessageProcessor(List<Node> nodes, MeshQTT.Entities.Config? config)
         {
             this.nodes = nodes;
             this.config = config;
+            this.nodeManager = new NodeManager(nodes, config);
+            this.payloadHandler = new PayloadHandler(nodeManager, config);
         }
 
         public async Task InterceptingPublishAsync(InterceptingPublishEventArgs context)
@@ -23,74 +27,6 @@ namespace MeshQTT.Managers
             {
                 MetricsManager.MessagesReceived.Inc();
                 var payload = context.ApplicationMessage.Payload;
-                Dictionary<string, object>? PacketJson;
-                try
-                {
-                    PacketJson = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                        context.ApplicationMessage.Payload.ToArray()
-                    );
-                }
-                catch
-                {
-                    PacketJson = null;
-                }
-                if (PacketJson is not null)
-                {
-                    if (
-                        PacketJson.TryGetValue("type", out var value)
-                        && value as string == "position"
-                    )
-                    {
-                        var payloadObj = value as JsonElement?;
-                        if (payloadObj.HasValue)
-                        {
-                            double Latitude =
-                                payloadObj.Value.GetProperty("latitude_i").GetInt32() * 1e-7;
-                            double Longitude =
-                                payloadObj.Value.GetProperty("longitude_i").GetInt32() * 1e-7;
-
-                            // Update or create node
-                            Node? node = nodes.FirstOrDefault(n =>
-                                n.NodeID == payloadObj.Value.GetProperty("sender").GetString()
-                            );
-                            if (node == null)
-                            {
-                                var senderId = payloadObj.Value.GetProperty("sender").GetString();
-                                if (string.IsNullOrEmpty(senderId))
-                                {
-                                    Logger.Log(
-                                        "Sender ID is null or empty in position payload, skipping node creation."
-                                    );
-                                    MetricsManager.MessagesFiltered.Inc();
-                                    context.ProcessPublish = false;
-                                    return;
-                                }
-                                node = new Node(senderId);
-                                nodes.Add(node);
-                            }
-                            else
-                            {
-                                if (
-                                    !(
-                                        node.LastUpdate.AddMinutes(
-                                            config?.PositionAppTimeoutMinutes ?? 720
-                                        ) < DateTime.Now
-                                        || node.GetDistanceTo(Latitude, Longitude) > 100
-                                    )
-                                )
-                                // Update only if the last update was more than 12 hours ago or if the position has changed significantly
-                                {
-                                    Logger.Log(
-                                        $"Node {payloadObj.Value.GetProperty("sender").GetString()} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(Latitude, Longitude)} m"
-                                    );
-                                    MetricsManager.MessagesFiltered.Inc();
-                                    context.ProcessPublish = false;
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
                 if (payload.IsEmpty || payload.Length == 0)
                 {
                     Logger.Log(
@@ -101,9 +37,7 @@ namespace MeshQTT.Managers
                     context.ProcessPublish = false;
                     return;
                 }
-                // Process the payload
                 ServiceEnvelope? envelope = ProcessMeshtasticPayload(payload);
-
                 if (envelope == null)
                 {
                     Logger.Log("Received invalid ServiceEnvelope, skipping further processing.");
@@ -112,67 +46,21 @@ namespace MeshQTT.Managers
                     return;
                 }
                 MeshPacket? data = DecryptEnvelope(envelope);
-                // Last part of the topic is the NodeID
                 string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
-                if (data?.Decoded.Portnum == PortNum.TextMessageApp)
+                switch (data?.Decoded.Portnum)
                 {
-                    Logger.Log(
-                        $"Received text message from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {data.Decoded.Payload.ToStringUtf8()}"
-                    );
-                }
-                else if (data?.Decoded.Portnum == PortNum.PositionApp)
-                {
-                    Position position = Position.Parser.ParseFrom(data.Decoded.Payload);
-                    double latitude = position.LatitudeI * 1e-7;
-                    double longitude = position.LongitudeI * 1e-7;
-
-                    // Update or create node
-                    Node? node = nodes.FirstOrDefault(n => n.NodeID == nodeID);
-                    if (node == null)
-                    {
-                        node = new Node(nodeID);
-                        nodes.Add(node);
-                    }
-                    else
-                    {
-                        if (
-                            !(
-                                node.LastUpdate.AddMinutes(config?.PositionAppTimeoutMinutes ?? 720)
-                                    < DateTime.Now
-                                || node.GetDistanceTo(latitude, longitude) > 100
-                            )
-                        )
-                        // Update only if the last update was more than 12 hours ago or if the position has changed significantly
-                        {
-                            Logger.Log(
-                                $"Node {nodeID} position update ignored due to insufficient change or recent update. Time since last update: {DateTime.Now - node.LastUpdate}, Position change: {node.GetDistanceTo(latitude, longitude)} m"
-                            );
-                            MetricsManager.MessagesFiltered.Inc();
-                            context.ProcessPublish = false;
-                            return;
-                        }
-                        node.LastLatitude = latitude;
-                        node.LastLongitude = longitude;
-                        node.LastUpdate = DateTime.Now;
-                    }
-
-                    Logger.Log(
-                        $"Received location data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {latitude}, {longitude} (accuracy: {position.VDOP} m)"
-                    );
-                }
-                else if (data?.Decoded.Portnum == PortNum.NodeinfoApp)
-                {
-                    NodeInfo nodeInfo = NodeInfo.Parser.ParseFrom(data.Decoded.Payload);
-                    Logger.Log(
-                        $"Received node info from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: {nodeInfo.User} (Channel: {nodeInfo.Channel}, version: {nodeInfo.Num})"
-                    );
-                }
-                else if (data?.Decoded.Portnum == PortNum.TelemetryApp)
-                {
-                    Telemetry telemetry = Telemetry.Parser.ParseFrom(data.Decoded.Payload);
-                    Logger.Log(
-                        $"Received telemetry data from {nodeID} heard by {envelope.GatewayId} on channel {envelope.ChannelId}: AirUtilTx: {telemetry.DeviceMetrics.AirUtilTx}, ChannelUtilization: {telemetry.DeviceMetrics.ChannelUtilization}"
-                    );
+                    case PortNum.TextMessageApp:
+                        payloadHandler.HandleTextMessage(nodeID, envelope, data);
+                        break;
+                    case PortNum.PositionApp:
+                        payloadHandler.HandlePosition(nodeID, envelope, data);
+                        break;
+                    case PortNum.NodeinfoApp:
+                        payloadHandler.HandleNodeInfo(nodeID, envelope, data);
+                        break;
+                    case PortNum.TelemetryApp:
+                        payloadHandler.HandleTelemetry(nodeID, envelope, data);
+                        break;
                 }
             }
             catch (Exception ex)
