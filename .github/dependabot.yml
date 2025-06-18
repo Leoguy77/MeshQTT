@@ -7,12 +7,6 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "deps"
-  - package-ecosystem: "nuget"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
