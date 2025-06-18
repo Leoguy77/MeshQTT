@@ -8,6 +8,7 @@
   <!-- only for debugging (config directory /config/config.json)-->
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <Content Include="config\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="logs\**\*.*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.31.1" />
