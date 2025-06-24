@@ -1,5 +1,10 @@
 {
   "Port": 1883,
+  "TlsEnabled": false,
+  "TlsPort": 8883,
+  "CertificatePath": "certs/server.crt",
+  "PrivateKeyPath": "certs/server.key",
+  "CertificatePassword": "",
   "Banlist": [],
   "Users": [
     {

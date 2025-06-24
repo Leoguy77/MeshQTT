@@ -12,7 +12,7 @@ RUN dotnet publish -o out
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 
 
-EXPOSE 1883 9000
+EXPOSE 1883 8883 9000
 
 WORKDIR /App
 COPY --from=build /App/out .

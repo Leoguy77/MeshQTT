@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using MeshQTT.Entities;
 using MQTTnet.Server;
 
@@ -24,11 +26,40 @@ namespace MeshQTT.Managers
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var mqttServerOptions = new MqttServerOptionsBuilder()
+            var mqttServerOptionsBuilder = new MqttServerOptionsBuilder()
                 .WithDefaultEndpoint()
                 .WithDefaultEndpointBoundIPAddress(IPAddress.Any)
-                .WithDefaultEndpointPort(config?.Port ?? 1883)
-                .Build();
+                .WithDefaultEndpointPort(config?.Port ?? 1883); // Add TLS endpoint if enabled
+            if (config?.TlsEnabled == true)
+            {
+                var certificate = CertificateManager.GetOrCreateCertificate(
+                    config.CertificatePath,
+                    config.PrivateKeyPath,
+                    config.CertificatePassword
+                );
+
+                Logger.Log(
+                    $"Certificate loaded: Subject={certificate.Subject}, HasPrivateKey={certificate.HasPrivateKey}"
+                );
+                Logger.Log(
+                    $"Certificate valid from {certificate.NotBefore} to {certificate.NotAfter}"
+                );
+
+                // Convert to PFX format for MQTTnet
+                var pfxBytes = certificate.Export(X509ContentType.Pfx);
+                var pfxCertificate = X509CertificateLoader.LoadPkcs12(pfxBytes, null);
+
+                mqttServerOptionsBuilder
+                    .WithEncryptedEndpoint()
+                    .WithEncryptedEndpointPort(config.TlsPort)
+                    .WithEncryptedEndpointBoundIPAddress(IPAddress.Any)
+                    .WithEncryptionCertificate(pfxCertificate)
+                    .WithEncryptionSslProtocol(SslProtocols.Tls12 | SslProtocols.Tls13);
+
+                Logger.Log($"TLS enabled on port {config.TlsPort}");
+            }
+
+            var mqttServerOptions = mqttServerOptionsBuilder.Build();
 
             mqttServer = new MqttServerFactory().CreateMqttServer(mqttServerOptions);
 
@@ -55,7 +86,12 @@ namespace MeshQTT.Managers
             try
             {
                 await mqttServer.StartAsync();
-                Logger.Log($"MQTT broker started on port {config?.Port ?? 1883}.");
+                var portInfo = $"port {config?.Port ?? 1883}";
+                if (config?.TlsEnabled == true)
+                {
+                    portInfo += $" (TLS on port {config.TlsPort})";
+                }
+                Logger.Log($"MQTT broker started on {portInfo}.");
             }
             catch (Exception ex)
             {

@@ -8,6 +8,31 @@ namespace MeshQTT.Entities
         public int Port { get; set; }
 
         /// <summary>
+        /// Gets or sets whether TLS is enabled.
+        /// </summary>
+        public bool TlsEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the TLS port (default 8883).
+        /// </summary>
+        public int TlsPort { get; set; }
+
+        /// <summary>
+        /// Gets or sets the path to the certificate file (.crt or .pem).
+        /// </summary>
+        public string? CertificatePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the path to the private key file (.key or .pem).
+        /// </summary>
+        public string? PrivateKeyPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the certificate password (if needed).
+        /// </summary>
+        public string? CertificatePassword { get; set; }
+
+        /// <summary>
         ///     Gets or sets the list of valid users.
         /// </summary>
         public List<User> Users { get; set; } = [];
@@ -34,6 +59,8 @@ namespace MeshQTT.Entities
         {
             // Default values
             Port = 1883;
+            TlsEnabled = false;
+            TlsPort = 8883;
             Users = new List<User>();
             EncryptionKeys = new List<string>();
             Banlist = new List<string>();
@@ -50,6 +77,11 @@ namespace MeshQTT.Entities
                 if (config != null)
                 {
                     Port = config.Port;
+                    TlsEnabled = config.TlsEnabled;
+                    TlsPort = config.TlsPort;
+                    CertificatePath = config.CertificatePath;
+                    PrivateKeyPath = config.PrivateKeyPath;
+                    CertificatePassword = config.CertificatePassword;
                     Users = config.Users;
                     EncryptionKeys = config.EncryptionKeys;
                     Banlist = config.Banlist;
@@ -110,6 +142,11 @@ namespace MeshQTT.Entities
                         if (updatedConfig != null)
                         {
                             Port = updatedConfig.Port;
+                            TlsEnabled = updatedConfig.TlsEnabled;
+                            TlsPort = updatedConfig.TlsPort;
+                            CertificatePath = updatedConfig.CertificatePath;
+                            PrivateKeyPath = updatedConfig.PrivateKeyPath;
+                            CertificatePassword = updatedConfig.CertificatePassword;
                             Users = updatedConfig.Users;
                             EncryptionKeys = updatedConfig.EncryptionKeys;
                             Banlist = updatedConfig.Banlist;
