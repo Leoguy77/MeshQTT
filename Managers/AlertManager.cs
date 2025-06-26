@@ -311,7 +311,7 @@ namespace MeshQTT.Managers
                 Metadata = new Dictionary<string, object>
                 {
                     { "Error", errorMessage },
-                    { "Exception", exception?.ToString() ?? "None" },
+                    { "Exception", "An error occurred. Please check server logs for details." },
                 },
             };
 
