@@ -61,5 +61,61 @@
     }
   ],
   "EncryptionKeys": ["AQ=="],
-  "PositionAppTimeoutMinutes": 720
+  "PositionAppTimeoutMinutes": 720,
+  "Alerting": {
+    "Enabled": false,
+    "Providers": [
+      {
+        "Type": "email",
+        "Enabled": false,
+        "Config": {
+          "SmtpHost": "smtp.gmail.com",
+          "SmtpPort": "587",
+          "Username": "your-email@gmail.com",
+          "Password": "your-app-password",
+          "FromEmail": "your-email@gmail.com",
+          "ToEmail": "admin@yourdomain.com",
+          "EnableSsl": "true"
+        }
+      },
+      {
+        "Type": "discord",
+        "Enabled": false,
+        "Config": {
+          "WebhookUrl": "https://discord.com/api/webhooks/your-webhook-url",
+          "Username": "MeshQTT Alert Bot"
+        }
+      },
+      {
+        "Type": "slack",
+        "Enabled": false,  
+        "Config": {
+          "WebhookUrl": "https://hooks.slack.com/services/your-webhook-url",
+          "Channel": "#alerts",
+          "Username": "MeshQTT Alert Bot"
+        }
+      },
+      {
+        "Type": "telegram",
+        "Enabled": false,
+        "Config": {
+          "BotToken": "your-bot-token-from-botfather",
+          "ChatId": "your-chat-id-or-group-id",
+          "DisableNotification": "false"
+        }
+      }
+    ],
+    "Security": {
+      "FailedLoginThreshold": 5,
+      "RapidNodeJoinsThreshold": 50,
+      "RapidNodeLeavesThreshold": 50,
+      "AlertOnNodeBan": true
+    },
+    "System": {
+      "MessageRateThreshold": 1000,
+      "AlertOnServiceRestart": true,
+      "AlertOnSystemErrors": true,
+      "ErrorRateThreshold": 10
+    }
+  }
 }
