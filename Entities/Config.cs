@@ -49,6 +49,11 @@ namespace MeshQTT.Entities
 
         public int PositionAppTimeoutMinutes { get; set; }
 
+        /// <summary>
+        /// Gets or sets the alerting configuration.
+        /// </summary>
+        public AlertConfig Alerting { get; set; } = new();
+
         private FileSystemWatcher? _fileWatcher = null;
         private Timer? _pollingTimer = null;
         private DateTime _lastWriteTime;
@@ -65,6 +70,7 @@ namespace MeshQTT.Entities
             EncryptionKeys = new List<string>();
             Banlist = new List<string>();
             PositionAppTimeoutMinutes = 30; // Default timeout in minutes
+            Alerting = new AlertConfig();
         }
 
         public Config(string filePath)
@@ -86,6 +92,7 @@ namespace MeshQTT.Entities
                     EncryptionKeys = config.EncryptionKeys;
                     Banlist = config.Banlist;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
+                    Alerting = config.Alerting ?? new AlertConfig();
 
                     // FileSystemWatcher (may not work in Docker Desktop)
                     var configPath = Path.Combine(AppContext.BaseDirectory, "config");
@@ -151,6 +158,7 @@ namespace MeshQTT.Entities
                             EncryptionKeys = updatedConfig.EncryptionKeys;
                             Banlist = updatedConfig.Banlist;
                             PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;
+                            Alerting = updatedConfig.Alerting ?? new AlertConfig();
                         }
                         Console.WriteLine("Reloaded config (polling)");
                         break;
