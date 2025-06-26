@@ -11,17 +11,20 @@ namespace MeshQTT.Managers
         private readonly Config? config;
         private readonly MessageProcessor messageProcessor;
         private readonly List<Node> nodes;
+        private readonly AlertManager? alertManager;
         private MqttServer? mqttServer;
 
         public MqttServerManager(
             Config? config,
             MessageProcessor messageProcessor,
-            List<Node> nodes
+            List<Node> nodes,
+            AlertManager? alertManager = null
         )
         {
             this.config = config;
             this.messageProcessor = messageProcessor;
             this.nodes = nodes;
+            this.alertManager = alertManager;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -109,7 +112,7 @@ namespace MeshQTT.Managers
             Logger.Log("MQTT broker stopped. Goodbye!");
         }
 
-        private Task ValidateConnection(ValidatingConnectionEventArgs args)
+        private async Task ValidateConnection(ValidatingConnectionEventArgs args)
         {
             try
             {
@@ -117,7 +120,16 @@ namespace MeshQTT.Managers
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
                     Logger.Log($"Failed login from {args.RemoteEndPoint} (reason: empty username)");
-                    return Task.CompletedTask;
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerFailedLoginAlert(
+                            args.RemoteEndPoint?.ToString() ?? "unknown", 
+                            args.UserName ?? "empty", 
+                            "empty username"
+                        );
+                    }
+                    return;
                 }
 
                 var currentUser = config?.Users.FirstOrDefault(u => u.UserName == args.UserName);
@@ -128,7 +140,16 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not found)"
                     );
-                    return Task.CompletedTask;
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerFailedLoginAlert(
+                            args.RemoteEndPoint?.ToString() ?? "unknown", 
+                            args.UserName, 
+                            "user not found"
+                        );
+                    }
+                    return;
                 }
 
                 if (args.UserName != currentUser.UserName)
@@ -137,7 +158,16 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not authorized)"
                     );
-                    return Task.CompletedTask;
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerFailedLoginAlert(
+                            args.RemoteEndPoint?.ToString() ?? "unknown", 
+                            args.UserName, 
+                            "user not authorized"
+                        );
+                    }
+                    return;
                 }
 
                 if (args.Password != currentUser.Password)
@@ -146,7 +176,16 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: invalid password for user {args.UserName})"
                     );
-                    return Task.CompletedTask;
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerFailedLoginAlert(
+                            args.RemoteEndPoint?.ToString() ?? "unknown", 
+                            args.UserName, 
+                            "invalid password"
+                        );
+                    }
+                    return;
                 }
 
                 if (!currentUser.ValidateClientId)
@@ -154,7 +193,7 @@ namespace MeshQTT.Managers
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.Success;
                     args.SessionItems.Add(args.ClientId, currentUser);
                     Logger.Log($"User {args.UserName} connected with client id {args.ClientId}.");
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 if (string.IsNullOrWhiteSpace(currentUser.ClientIdPrefix))
@@ -166,7 +205,7 @@ namespace MeshQTT.Managers
                             .MqttConnectReasonCode
                             .ClientIdentifierNotValid;
                         Logger.Log($"Client id {args.ClientId} is not valid.");
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     args.SessionItems.Add(currentUser.ClientId, currentUser);
@@ -174,12 +213,17 @@ namespace MeshQTT.Managers
 
                 args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.Success;
                 Logger.Log($"User {args.UserName} connected with client id {args.ClientId}.");
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
                 Logger.Log($"An error occurred: {ex}");
-                return Task.FromException(ex);
+                
+                if (alertManager != null)
+                {
+                    await alertManager.TriggerSystemErrorAlert($"Connection validation error: {ex.Message}", ex);
+                }
+                
+                throw;
             }
         }
     }

@@ -12,13 +12,15 @@ namespace MeshQTT.Managers
         private readonly MeshQTT.Entities.Config? config;
         private readonly NodeManager nodeManager;
         private readonly PayloadHandler payloadHandler;
+        private readonly AlertManager? alertManager;
 
-        public MessageProcessor(List<Node> nodes, MeshQTT.Entities.Config? config)
+        public MessageProcessor(List<Node> nodes, MeshQTT.Entities.Config? config, AlertManager? alertManager = null)
         {
             this.nodes = nodes;
             this.config = config;
-            this.nodeManager = new NodeManager(nodes, config);
-            this.payloadHandler = new PayloadHandler(nodeManager, config);
+            this.alertManager = alertManager;
+            this.nodeManager = new NodeManager(nodes, config, alertManager);
+            this.payloadHandler = new PayloadHandler(nodeManager, config, alertManager);
         }
 
         public async Task InterceptingPublishAsync(InterceptingPublishEventArgs context)
@@ -26,6 +28,13 @@ namespace MeshQTT.Managers
             try
             {
                 MetricsManager.MessagesReceived.Inc();
+                
+                // Trigger message rate alert
+                if (alertManager != null)
+                {
+                    await alertManager.TriggerMessageRateAlert();
+                }
+                
                 var payload = context.ApplicationMessage.Payload;
                 if (payload.IsEmpty || payload.Length == 0)
                 {

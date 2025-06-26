@@ -7,11 +7,13 @@ namespace MeshQTT.Managers
     {
         private readonly NodeManager nodeManager;
         private readonly MeshQTT.Entities.Config? config;
+        private readonly AlertManager? alertManager;
 
-        public PayloadHandler(NodeManager nodeManager, MeshQTT.Entities.Config? config)
+        public PayloadHandler(NodeManager nodeManager, MeshQTT.Entities.Config? config, AlertManager? alertManager = null)
         {
             this.nodeManager = nodeManager;
             this.config = config;
+            this.alertManager = alertManager;
         }
 
         public void HandleTextMessage(string nodeID, ServiceEnvelope envelope, MeshPacket data)
