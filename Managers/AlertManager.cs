@@ -20,6 +20,9 @@ namespace MeshQTT.Managers
         private DateTime _lastMessageReset = DateTime.UtcNow;
         private int _errorCount = 0;
         private DateTime _lastErrorReset = DateTime.UtcNow;
+        
+        // Per-node message rate tracking
+        private readonly ConcurrentDictionary<string, List<DateTime>> _nodeMessageCounts = new();
 
         public AlertManager(Config config)
         {
@@ -171,7 +174,7 @@ namespace MeshQTT.Managers
             }
         }
 
-        public async Task TriggerMessageRateAlert()
+        public async Task TriggerMessageRateAlert(string? nodeId = null)
         {
             if (!_config.Alerting.Enabled)
                 return;
@@ -179,7 +182,42 @@ namespace MeshQTT.Managers
             _messageCount++;
             var now = DateTime.UtcNow;
 
-            // Reset counter every minute
+            // Track per-node message rates if nodeId is provided
+            if (!string.IsNullOrEmpty(nodeId))
+            {
+                if (!_nodeMessageCounts.ContainsKey(nodeId))
+                    _nodeMessageCounts[nodeId] = new List<DateTime>();
+
+                _nodeMessageCounts[nodeId].Add(now);
+
+                // Remove old entries (older than 1 minute)
+                _nodeMessageCounts[nodeId] = _nodeMessageCounts[nodeId]
+                    .Where(t => now - t < TimeSpan.FromMinutes(1))
+                    .ToList();
+
+                // Check if per-node threshold exceeded
+                if (_nodeMessageCounts[nodeId].Count >= _config.Alerting.System.NodeMessageRateThreshold)
+                {
+                    var nodeAlertEvent = new AlertEvent
+                    {
+                        Type = "system.high_node_message_rate",
+                        Title = "High Node Message Rate Detected",
+                        Message =
+                            $"Node {nodeId} has sent {_nodeMessageCounts[nodeId].Count} messages in the last minute, exceeding threshold of {_config.Alerting.System.NodeMessageRateThreshold}.",
+                        Severity = AlertSeverity.High,
+                        Metadata = new Dictionary<string, object>
+                        {
+                            { "NodeId", nodeId },
+                            { "MessagesPerMinute", _nodeMessageCounts[nodeId].Count },
+                            { "Threshold", _config.Alerting.System.NodeMessageRateThreshold },
+                        },
+                    };
+
+                    await SendAlert(nodeAlertEvent);
+                }
+            }
+
+            // Reset counter every minute for overall system rate
             if (now - _lastMessageReset > TimeSpan.FromMinutes(1))
             {
                 if (_messageCount >= _config.Alerting.System.MessageRateThreshold)
@@ -187,9 +225,9 @@ namespace MeshQTT.Managers
                     var alertEvent = new AlertEvent
                     {
                         Type = "system.high_message_rate",
-                        Title = "High Message Rate Detected",
+                        Title = "High System Message Rate Detected",
                         Message =
-                            $"Message rate of {_messageCount} messages per minute exceeds threshold of {_config.Alerting.System.MessageRateThreshold}.",
+                            $"System message rate of {_messageCount} messages per minute exceeds threshold of {_config.Alerting.System.MessageRateThreshold}.",
                         Severity = AlertSeverity.Medium,
                         Metadata = new Dictionary<string, object>
                         {
@@ -353,6 +391,16 @@ namespace MeshQTT.Managers
                     _failedLogins[kvp.Key] = recentLogins;
                 else
                     _failedLogins.TryRemove(kvp.Key, out _);
+            }
+
+            // Clean up old per-node message counts (keep entries from last minute)
+            foreach (var kvp in _nodeMessageCounts.ToList())
+            {
+                var recentMessages = kvp.Value.Where(t => now - t < TimeSpan.FromMinutes(1)).ToList();
+                if (recentMessages.Any())
+                    _nodeMessageCounts[kvp.Key] = recentMessages;
+                else
+                    _nodeMessageCounts.TryRemove(kvp.Key, out _);
             }
 
             // Clean up old node join/leave counters (keep current and previous hour)

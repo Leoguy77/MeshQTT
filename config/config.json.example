@@ -113,6 +113,7 @@
     },
     "System": {
       "MessageRateThreshold": 1000,
+      "NodeMessageRateThreshold": 100,
       "AlertOnServiceRestart": true,
       "AlertOnSystemErrors": true,
       "ErrorRateThreshold": 10

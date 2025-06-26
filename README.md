@@ -117,6 +117,7 @@ Enable alerting by adding the `Alerting` section to your `config.json`:
 
 #### System Thresholds
 - `MessageRateThreshold`: Maximum messages per minute before alerting (default: 1000)
+- `NodeMessageRateThreshold`: Maximum messages per minute per node before alerting (default: 100)
 - `AlertOnServiceRestart`: Alert when service starts/restarts (default: true)
 - `AlertOnSystemErrors`: Alert on individual system errors (default: true)  
 - `ErrorRateThreshold`: Maximum errors per hour before rate alerting (default: 10)

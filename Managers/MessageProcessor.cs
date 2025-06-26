@@ -29,12 +29,6 @@ namespace MeshQTT.Managers
             {
                 MetricsManager.MessagesReceived.Inc();
                 
-                // Trigger message rate alert
-                if (alertManager != null)
-                {
-                    await alertManager.TriggerMessageRateAlert();
-                }
-                
                 var payload = context.ApplicationMessage.Payload;
                 if (payload.IsEmpty || payload.Length == 0)
                 {
@@ -56,6 +50,13 @@ namespace MeshQTT.Managers
                 }
                 MeshPacket? data = DecryptEnvelope(envelope);
                 string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
+                
+                // Trigger message rate alert with node ID
+                if (alertManager != null)
+                {
+                    await alertManager.TriggerMessageRateAlert(nodeID);
+                }
+                
                 if (config != null && config.Banlist.Contains(nodeID))
                 {
                     Logger.Log($"Blocked message from banned node {nodeID}.");

@@ -72,6 +72,11 @@ namespace MeshQTT.Entities
         public int MessageRateThreshold { get; set; } = 1000;
 
         /// <summary>
+        /// Maximum messages per minute per node before alerting.
+        /// </summary>
+        public int NodeMessageRateThreshold { get; set; } = 100;
+
+        /// <summary>
         /// Alert on service restarts.
         /// </summary>
         public bool AlertOnServiceRestart { get; set; } = true;
