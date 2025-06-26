@@ -97,7 +97,7 @@ namespace MeshQTT.Entities
         Low,
         Medium,
         High,
-        Critical
+        Critical,
     }
 
     public class AlertEvent

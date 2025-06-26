@@ -20,7 +20,7 @@ namespace MeshQTT.Managers
         private DateTime _lastMessageReset = DateTime.UtcNow;
         private int _errorCount = 0;
         private DateTime _lastErrorReset = DateTime.UtcNow;
-        
+
         // Per-node message rate tracking
         private readonly ConcurrentDictionary<string, List<DateTime>> _nodeMessageCounts = new();
 
@@ -174,7 +174,11 @@ namespace MeshQTT.Managers
             }
         }
 
-        public async Task TriggerMessageRateAlert(string? nodeId = null)
+        public async Task TriggerMessageRateAlert(
+            string? nodeId = null,
+            string? gatewayClientId = null,
+            string? gatewayIp = null
+        )
         {
             if (!_config.Alerting.Enabled)
                 return;
@@ -196,20 +200,38 @@ namespace MeshQTT.Managers
                     .ToList();
 
                 // Check if per-node threshold exceeded
-                if (_nodeMessageCounts[nodeId].Count >= _config.Alerting.System.NodeMessageRateThreshold)
+                if (
+                    _nodeMessageCounts[nodeId].Count
+                    >= _config.Alerting.System.NodeMessageRateThreshold
+                )
                 {
+                    var gatewayInfo = "";
+                    if (!string.IsNullOrEmpty(gatewayClientId) || !string.IsNullOrEmpty(gatewayIp))
+                    {
+                        gatewayInfo =
+                            " Gateway: "
+                            + (
+                                !string.IsNullOrEmpty(gatewayClientId)
+                                    ? $"Client '{gatewayClientId}'"
+                                    : "Unknown Client"
+                            )
+                            + (!string.IsNullOrEmpty(gatewayIp) ? $" from {gatewayIp}" : "");
+                    }
+
                     var nodeAlertEvent = new AlertEvent
                     {
                         Type = "system.high_node_message_rate",
                         Title = "High Node Message Rate Detected",
                         Message =
-                            $"Node {nodeId} has sent {_nodeMessageCounts[nodeId].Count} messages in the last minute, exceeding threshold of {_config.Alerting.System.NodeMessageRateThreshold}.",
+                            $"Meshtastic Node {nodeId} has sent {_nodeMessageCounts[nodeId].Count} messages in the last minute, exceeding threshold of {_config.Alerting.System.NodeMessageRateThreshold}.{gatewayInfo}",
                         Severity = AlertSeverity.High,
                         Metadata = new Dictionary<string, object>
                         {
-                            { "NodeId", nodeId },
+                            { "MeshtasticNodeId", nodeId },
                             { "MessagesPerMinute", _nodeMessageCounts[nodeId].Count },
                             { "Threshold", _config.Alerting.System.NodeMessageRateThreshold },
+                            { "GatewayClientId", gatewayClientId ?? "Unknown" },
+                            { "GatewayIP", gatewayIp ?? "Unknown" },
                         },
                     };
 
@@ -396,7 +418,9 @@ namespace MeshQTT.Managers
             // Clean up old per-node message counts (keep entries from last minute)
             foreach (var kvp in _nodeMessageCounts.ToList())
             {
-                var recentMessages = kvp.Value.Where(t => now - t < TimeSpan.FromMinutes(1)).ToList();
+                var recentMessages = kvp
+                    .Value.Where(t => now - t < TimeSpan.FromMinutes(1))
+                    .ToList();
                 if (recentMessages.Any())
                     _nodeMessageCounts[kvp.Key] = recentMessages;
                 else

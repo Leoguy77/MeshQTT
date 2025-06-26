@@ -18,11 +18,13 @@ MeshQTT includes a comprehensive alerting system that can notify administrators 
 ### Alert Types
 
 #### Security Alerts
+
 - **Failed Login Attempts**: Detects and alerts on repeated failed login attempts from the same IP
 - **Node Bans**: Immediate notifications when nodes are banned from the network
 - **Rapid Node Activity**: Alerts on unusual node join/leave patterns that might indicate network issues or attacks
 
-#### System Alerts  
+#### System Alerts
+
 - **High Message Rates**: Monitors message throughput and alerts on abnormal traffic
 - **System Errors**: Automatic notification of application errors and exceptions
 - **Service Restarts**: Notifications when the service starts, stops, or restarts
@@ -31,21 +33,25 @@ MeshQTT includes a comprehensive alerting system that can notify administrators 
 ### Notification Channels
 
 #### Email Notifications
+
 - Full HTML email alerts with detailed event information
 - Support for SMTP with TLS/SSL
 - Configurable sender and recipient addresses
 
 #### Discord Integration
+
 - Rich embed messages with color-coded severity levels
 - Webhook-based integration (no bot required)
 - Customizable bot username and appearance
 
-#### Slack Integration  
+#### Slack Integration
+
 - Native Slack attachments with proper formatting
 - Channel-specific notifications
 - Color-coded severity indicators
 
 #### Telegram Integration
+
 - Rich HTML-formatted messages with emojis
 - Bot-based integration with flexible chat targeting
 - Support for both private chats and groups
@@ -65,7 +71,7 @@ Enable alerting by adding the `Alerting` section to your `config.json`:
         "Enabled": true,
         "Config": {
           "SmtpHost": "smtp.gmail.com",
-          "SmtpPort": "587", 
+          "SmtpPort": "587",
           "Username": "alerts@yourdomain.com",
           "Password": "your-app-password",
           "FromEmail": "alerts@yourdomain.com",
@@ -93,7 +99,7 @@ Enable alerting by adding the `Alerting` section to your `config.json`:
     ],
     "Security": {
       "FailedLoginThreshold": 5,
-      "RapidNodeJoinsThreshold": 50, 
+      "RapidNodeJoinsThreshold": 50,
       "RapidNodeLeavesThreshold": 50,
       "AlertOnNodeBan": true
     },
@@ -110,48 +116,57 @@ Enable alerting by adding the `Alerting` section to your `config.json`:
 ### Alert Thresholds
 
 #### Security Thresholds
+
 - `FailedLoginThreshold`: Maximum failed login attempts per IP per hour (default: 5)
-- `RapidNodeJoinsThreshold`: Maximum node joins per hour before alerting (default: 50)  
+- `RapidNodeJoinsThreshold`: Maximum node joins per hour before alerting (default: 50)
 - `RapidNodeLeavesThreshold`: Maximum node leaves per hour before alerting (default: 50)
 - `AlertOnNodeBan`: Whether to send immediate alerts for node bans (default: true)
 
 #### System Thresholds
+
 - `MessageRateThreshold`: Maximum messages per minute before alerting (default: 1000)
 - `NodeMessageRateThreshold`: Maximum messages per minute per node before alerting (default: 100)
 - `AlertOnServiceRestart`: Alert when service starts/restarts (default: true)
-- `AlertOnSystemErrors`: Alert on individual system errors (default: true)  
+- `AlertOnSystemErrors`: Alert on individual system errors (default: true)
 - `ErrorRateThreshold`: Maximum errors per hour before rate alerting (default: 10)
 
 ### Setting Up Notification Providers
 
 #### Email Setup (Gmail Example)
+
 1. Enable 2-factor authentication on your Gmail account
 2. Generate an App Password (not your regular password)
 3. Configure the email provider with your SMTP settings
 
 #### Discord Setup
+
 1. Create a Discord webhook in your server settings
 2. Copy the webhook URL to the configuration
 3. Optionally customize the bot username
 
-#### Slack Setup  
+#### Slack Setup
+
 1. Create a Slack webhook in your workspace
 2. Choose the channel for notifications
 3. Copy the webhook URL to the configuration
 
 #### Telegram Setup
+
 1. Create a Telegram bot by messaging @BotFather
 2. Get your bot token from BotFather
 3. Add the bot to your chat/group and get the Chat ID
 4. Configure the bot token and chat ID in the settings
 
 ##### Getting Your Telegram Chat ID
+
 To find your Chat ID:
+
 - **For private chats**: Send a message to your bot, then visit `https://api.telegram.org/bot<YourBotToken>/getUpdates` to see the chat ID
 - **For groups**: Add your bot to the group, send a message mentioning the bot, then check the same URL for the group's chat ID (will be negative)
 - **Using @userinfobot**: Forward a message from your chat/group to @userinfobot to get the ID
 
 ##### Telegram Configuration Options
+
 - `BotToken`: Your bot token from @BotFather (required)
 - `ChatId`: The chat ID where alerts should be sent (required)
 - `DisableNotification`: Set to `true` for silent notifications (optional, default: false)
@@ -159,6 +174,7 @@ To find your Chat ID:
 ### Rate Limiting
 
 The alerting system includes built-in rate limiting to prevent notification spam:
+
 - Same alert types are limited to once per 5 minutes
 - Failed login tracking uses sliding windows
 - Counters are automatically cleaned up to prevent memory leaks
@@ -166,8 +182,9 @@ The alerting system includes built-in rate limiting to prevent notification spam
 ### Testing Alerts
 
 To test your alerting configuration:
+
 1. Enable alerting with your desired providers (email, Discord, Slack, or Telegram)
-2. Restart the service (should trigger a service restart alert)  
+2. Restart the service (should trigger a service restart alert)
 3. Try failed logins to trigger security alerts
 4. Monitor logs for alert delivery confirmation
 

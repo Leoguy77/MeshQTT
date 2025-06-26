@@ -14,7 +14,11 @@ namespace MeshQTT.Managers
         private readonly PayloadHandler payloadHandler;
         private readonly AlertManager? alertManager;
 
-        public MessageProcessor(List<Node> nodes, MeshQTT.Entities.Config? config, AlertManager? alertManager = null)
+        public MessageProcessor(
+            List<Node> nodes,
+            MeshQTT.Entities.Config? config,
+            AlertManager? alertManager = null
+        )
         {
             this.nodes = nodes;
             this.config = config;
@@ -28,7 +32,7 @@ namespace MeshQTT.Managers
             try
             {
                 MetricsManager.MessagesReceived.Inc();
-                
+
                 var payload = context.ApplicationMessage.Payload;
                 if (payload.IsEmpty || payload.Length == 0)
                 {
@@ -40,6 +44,28 @@ namespace MeshQTT.Managers
                     context.ProcessPublish = false;
                     return;
                 }
+                string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
+
+                // Extract gateway IP from the context (if available)
+                string? gatewayIp = null;
+                try
+                {
+                    var remoteEndpoint = context.SessionItems["RemoteEndpoint"];
+                    if (remoteEndpoint != null)
+                    {
+                        gatewayIp = ExtractIpFromEndpoint(remoteEndpoint.ToString() ?? "");
+                    }
+                }
+                catch
+                {
+                    // RemoteEndpoint not available, continue without IP
+                }
+
+                // Trigger message rate alert with node ID, gateway client ID, and gateway IP
+                if (alertManager != null)
+                {
+                    await alertManager.TriggerMessageRateAlert(nodeID, context.ClientId, gatewayIp);
+                }
                 ServiceEnvelope? envelope = ProcessMeshtasticPayload(payload);
                 if (envelope == null)
                 {
@@ -49,14 +75,7 @@ namespace MeshQTT.Managers
                     return;
                 }
                 MeshPacket? data = DecryptEnvelope(envelope);
-                string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
-                
-                // Trigger message rate alert with node ID
-                if (alertManager != null)
-                {
-                    await alertManager.TriggerMessageRateAlert(nodeID);
-                }
-                
+
                 if (config != null && config.Banlist.Contains(nodeID))
                 {
                     Logger.Log($"Blocked message from banned node {nodeID}.");
@@ -147,6 +166,26 @@ namespace MeshQTT.Managers
                 }
             }
             return null;
+        }
+
+        private string ExtractIpFromEndpoint(string endpoint)
+        {
+            if (string.IsNullOrEmpty(endpoint))
+                return "Unknown";
+
+            // Handle IPv6 addresses like [::1]:61642
+            if (endpoint.StartsWith("["))
+            {
+                var closingBracket = endpoint.IndexOf(']');
+                if (closingBracket > 0)
+                {
+                    return endpoint.Substring(1, closingBracket - 1);
+                }
+            }
+
+            // Handle IPv4 addresses like "192.168.1.1:12345"
+            var lastColon = endpoint.LastIndexOf(':');
+            return lastColon > 0 ? endpoint.Substring(0, lastColon) : endpoint;
         }
     }
 }
