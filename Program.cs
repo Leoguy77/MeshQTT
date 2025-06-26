@@ -18,8 +18,22 @@ namespace MeshQTT
             isDebug = true;
 #endif
             MetricsManager.StartPrometheusMetricsServer(isDebug);
-            var messageProcessor = new MessageProcessor(nodes, config);
-            var mqttServerManager = new MqttServerManager(config, messageProcessor, nodes);
+            
+            // Initialize AlertManager
+            AlertManager? alertManager = null;
+            if (config != null)
+            {
+                alertManager = new AlertManager(config);
+                
+                // Send service start alert
+                if (config.Alerting.Enabled)
+                {
+                    await alertManager.TriggerServiceRestartAlert("Service started");
+                }
+            }
+            
+            var messageProcessor = new MessageProcessor(nodes, config, alertManager);
+            var mqttServerManager = new MqttServerManager(config, messageProcessor, nodes, alertManager);
 
             var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, eventArgs) =>
