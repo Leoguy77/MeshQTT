@@ -9,7 +9,10 @@ namespace MeshQTT.Managers.Notifications
     {
         public string ProviderType => "email";
 
-        public async Task<bool> SendNotificationAsync(AlertEvent alertEvent, Dictionary<string, string> config)
+        public async Task<bool> SendNotificationAsync(
+            AlertEvent alertEvent,
+            Dictionary<string, string> config
+        )
         {
             try
             {
@@ -44,8 +47,18 @@ namespace MeshQTT.Managers.Notifications
 
         public bool ValidateConfig(Dictionary<string, string> config)
         {
-            var requiredKeys = new[] { "SmtpHost", "SmtpPort", "Username", "Password", "FromEmail", "ToEmail" };
-            return requiredKeys.All(key => config.ContainsKey(key) && !string.IsNullOrEmpty(config[key]));
+            var requiredKeys = new[]
+            {
+                "SmtpHost",
+                "SmtpPort",
+                "Username",
+                "Password",
+                "FromEmail",
+                "ToEmail",
+            };
+            return requiredKeys.All(key =>
+                config.ContainsKey(key) && !string.IsNullOrEmpty(config[key])
+            );
         }
 
         private string BuildEmailBody(AlertEvent alertEvent)
@@ -53,11 +66,13 @@ namespace MeshQTT.Managers.Notifications
             var sb = new StringBuilder();
             sb.AppendLine("<html><body>");
             sb.AppendLine($"<h2>MeshQTT Alert - {alertEvent.Severity}</h2>");
-            sb.AppendLine($"<p><strong>Time:</strong> {alertEvent.Timestamp:yyyy-MM-dd HH:mm:ss} UTC</p>");
+            sb.AppendLine(
+                $"<p><strong>Time:</strong> {alertEvent.Timestamp:yyyy-MM-dd HH:mm:ss} UTC</p>"
+            );
             sb.AppendLine($"<p><strong>Event Type:</strong> {alertEvent.Type}</p>");
             sb.AppendLine($"<p><strong>Title:</strong> {alertEvent.Title}</p>");
             sb.AppendLine($"<p><strong>Message:</strong> {alertEvent.Message}</p>");
-            
+
             if (alertEvent.Metadata.Any())
             {
                 sb.AppendLine("<h3>Additional Details:</h3>");
@@ -68,7 +83,7 @@ namespace MeshQTT.Managers.Notifications
                 }
                 sb.AppendLine("</ul>");
             }
-            
+
             sb.AppendLine("</body></html>");
             return sb.ToString();
         }

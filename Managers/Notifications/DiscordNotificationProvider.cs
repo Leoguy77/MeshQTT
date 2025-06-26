@@ -7,10 +7,13 @@ namespace MeshQTT.Managers.Notifications
     public class DiscordNotificationProvider : INotificationProvider
     {
         private static readonly HttpClient HttpClient = new();
-        
+
         public string ProviderType => "discord";
 
-        public async Task<bool> SendNotificationAsync(AlertEvent alertEvent, Dictionary<string, string> config)
+        public async Task<bool> SendNotificationAsync(
+            AlertEvent alertEvent,
+            Dictionary<string, string> config
+        )
         {
             try
             {
@@ -25,24 +28,44 @@ namespace MeshQTT.Managers.Notifications
                     timestamp = alertEvent.Timestamp.ToString("o"),
                     fields = new[]
                     {
-                        new { name = "Event Type", value = alertEvent.Type, inline = true },
-                        new { name = "Severity", value = alertEvent.Severity.ToString(), inline = true },
-                        new { name = "Event ID", value = alertEvent.Id, inline = true }
-                    }.Concat(alertEvent.Metadata.Select(kvp => new { name = kvp.Key, value = kvp.Value?.ToString() ?? "", inline = true })).ToArray(),
-                    footer = new { text = "MeshQTT Alert System" }
+                        new
+                        {
+                            name = "Event Type",
+                            value = alertEvent.Type,
+                            inline = true,
+                        },
+                        new
+                        {
+                            name = "Severity",
+                            value = alertEvent.Severity.ToString(),
+                            inline = true,
+                        },
+                        new
+                        {
+                            name = "Event ID",
+                            value = alertEvent.Id,
+                            inline = true,
+                        },
+                    }
+                        .Concat(
+                            alertEvent.Metadata.Select(kvp => new
+                            {
+                                name = kvp.Key,
+                                value = kvp.Value?.ToString() ?? "",
+                                inline = true,
+                            })
+                        )
+                        .ToArray(),
+                    footer = new { text = "MeshQTT Alert System" },
                 };
 
-                var payload = new
-                {
-                    username = username,
-                    embeds = new[] { embed }
-                };
+                var payload = new { username = username, embeds = new[] { embed } };
 
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await HttpClient.PostAsync(webhookUrl, content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     Logger.Log($"Discord alert sent successfully for event: {alertEvent.Id}");
@@ -70,11 +93,11 @@ namespace MeshQTT.Managers.Notifications
         {
             return severity switch
             {
-                AlertSeverity.Low => 0x00FF00,      // Green
-                AlertSeverity.Medium => 0xFFFF00,   // Yellow
-                AlertSeverity.High => 0xFF8000,     // Orange
+                AlertSeverity.Low => 0x00FF00, // Green
+                AlertSeverity.Medium => 0xFFFF00, // Yellow
+                AlertSeverity.High => 0xFF8000, // Orange
                 AlertSeverity.Critical => 0xFF0000, // Red
-                _ => 0x808080                       // Gray
+                _ => 0x808080, // Gray
             };
         }
     }

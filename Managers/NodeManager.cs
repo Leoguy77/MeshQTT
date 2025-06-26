@@ -8,7 +8,11 @@ namespace MeshQTT.Managers
         private readonly MeshQTT.Entities.Config? config;
         private readonly AlertManager? alertManager;
 
-        public NodeManager(List<Node> nodes, MeshQTT.Entities.Config? config, AlertManager? alertManager = null)
+        public NodeManager(
+            List<Node> nodes,
+            MeshQTT.Entities.Config? config,
+            AlertManager? alertManager = null
+        )
         {
             this.nodes = nodes;
             this.config = config;
@@ -22,7 +26,7 @@ namespace MeshQTT.Managers
             {
                 node = new Node(nodeId);
                 nodes.Add(node);
-                
+
                 // Trigger node join alert
                 if (alertManager != null)
                 {

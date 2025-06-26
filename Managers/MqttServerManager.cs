@@ -120,12 +120,12 @@ namespace MeshQTT.Managers
                 {
                     args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.BadUserNameOrPassword;
                     Logger.Log($"Failed login from {args.RemoteEndPoint} (reason: empty username)");
-                    
+
                     if (alertManager != null)
                     {
                         await alertManager.TriggerFailedLoginAlert(
-                            args.RemoteEndPoint?.ToString() ?? "unknown", 
-                            args.UserName ?? "empty", 
+                            args.RemoteEndPoint?.ToString() ?? "unknown",
+                            args.UserName ?? "empty",
                             "empty username"
                         );
                     }
@@ -140,12 +140,12 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not found)"
                     );
-                    
+
                     if (alertManager != null)
                     {
                         await alertManager.TriggerFailedLoginAlert(
-                            args.RemoteEndPoint?.ToString() ?? "unknown", 
-                            args.UserName, 
+                            args.RemoteEndPoint?.ToString() ?? "unknown",
+                            args.UserName,
                             "user not found"
                         );
                     }
@@ -158,12 +158,12 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: user {args.UserName} not authorized)"
                     );
-                    
+
                     if (alertManager != null)
                     {
                         await alertManager.TriggerFailedLoginAlert(
-                            args.RemoteEndPoint?.ToString() ?? "unknown", 
-                            args.UserName, 
+                            args.RemoteEndPoint?.ToString() ?? "unknown",
+                            args.UserName,
                             "user not authorized"
                         );
                     }
@@ -176,12 +176,12 @@ namespace MeshQTT.Managers
                     Logger.Log(
                         $"Failed login from {args.RemoteEndPoint} (reason: invalid password for user {args.UserName})"
                     );
-                    
+
                     if (alertManager != null)
                     {
                         await alertManager.TriggerFailedLoginAlert(
-                            args.RemoteEndPoint?.ToString() ?? "unknown", 
-                            args.UserName, 
+                            args.RemoteEndPoint?.ToString() ?? "unknown",
+                            args.UserName,
                             "invalid password"
                         );
                     }
@@ -217,12 +217,15 @@ namespace MeshQTT.Managers
             catch (Exception ex)
             {
                 Logger.Log($"An error occurred: {ex}");
-                
+
                 if (alertManager != null)
                 {
-                    await alertManager.TriggerSystemErrorAlert($"Connection validation error: {ex.Message}", ex);
+                    await alertManager.TriggerSystemErrorAlert(
+                        $"Connection validation error: {ex.Message}",
+                        ex
+                    );
                 }
-                
+
                 throw;
             }
         }

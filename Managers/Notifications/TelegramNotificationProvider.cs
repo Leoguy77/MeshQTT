@@ -7,25 +7,30 @@ namespace MeshQTT.Managers.Notifications
     public class TelegramNotificationProvider : INotificationProvider
     {
         private static readonly HttpClient HttpClient = new();
-        
+
         public string ProviderType => "telegram";
 
-        public async Task<bool> SendNotificationAsync(AlertEvent alertEvent, Dictionary<string, string> config)
+        public async Task<bool> SendNotificationAsync(
+            AlertEvent alertEvent,
+            Dictionary<string, string> config
+        )
         {
             try
             {
                 var botToken = config.GetValueOrDefault("BotToken", "");
                 var chatId = config.GetValueOrDefault("ChatId", "");
-                var disableNotification = bool.Parse(config.GetValueOrDefault("DisableNotification", "false"));
+                var disableNotification = bool.Parse(
+                    config.GetValueOrDefault("DisableNotification", "false")
+                );
 
                 var message = BuildTelegramMessage(alertEvent);
-                
+
                 var payload = new
                 {
                     chat_id = chatId,
                     text = message,
                     parse_mode = "HTML",
-                    disable_notification = disableNotification
+                    disable_notification = disableNotification,
                 };
 
                 var json = JsonSerializer.Serialize(payload);
@@ -33,7 +38,7 @@ namespace MeshQTT.Managers.Notifications
 
                 var url = $"https://api.telegram.org/bot{botToken}/sendMessage";
                 var response = await HttpClient.PostAsync(url, content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     Logger.Log($"Telegram alert sent successfully for event: {alertEvent.Id}");
@@ -42,7 +47,9 @@ namespace MeshQTT.Managers.Notifications
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    Logger.Log($"Failed to send Telegram alert. Status: {response.StatusCode}, Error: {errorContent}");
+                    Logger.Log(
+                        $"Failed to send Telegram alert. Status: {response.StatusCode}, Error: {errorContent}"
+                    );
                     return false;
                 }
             }
@@ -55,14 +62,16 @@ namespace MeshQTT.Managers.Notifications
 
         public bool ValidateConfig(Dictionary<string, string> config)
         {
-            return config.ContainsKey("BotToken") && !string.IsNullOrEmpty(config["BotToken"]) &&
-                   config.ContainsKey("ChatId") && !string.IsNullOrEmpty(config["ChatId"]);
+            return config.ContainsKey("BotToken")
+                && !string.IsNullOrEmpty(config["BotToken"])
+                && config.ContainsKey("ChatId")
+                && !string.IsNullOrEmpty(config["ChatId"]);
         }
 
         private string BuildTelegramMessage(AlertEvent alertEvent)
         {
             var sb = new StringBuilder();
-            
+
             // Add severity emoji
             var severityEmoji = alertEvent.Severity switch
             {
@@ -70,7 +79,7 @@ namespace MeshQTT.Managers.Notifications
                 AlertSeverity.Medium => "🟡",
                 AlertSeverity.High => "🟠",
                 AlertSeverity.Critical => "🔴",
-                _ => "⚪"
+                _ => "⚪",
             };
 
             // Add alert type emoji
@@ -78,7 +87,7 @@ namespace MeshQTT.Managers.Notifications
             {
                 var t when t.StartsWith("security.") => "🔒",
                 var t when t.StartsWith("system.") => "⚙️",
-                _ => "📢"
+                _ => "📢",
             };
 
             sb.AppendLine($"{severityEmoji} {typeEmoji} <b>MeshQTT Alert</b>");
@@ -91,7 +100,7 @@ namespace MeshQTT.Managers.Notifications
             sb.AppendLine(alertEvent.Message);
             sb.AppendLine();
             sb.AppendLine($"<b>Time:</b> {alertEvent.Timestamp:yyyy-MM-dd HH:mm:ss} UTC");
-            
+
             if (alertEvent.Metadata.Any())
             {
                 sb.AppendLine();
@@ -101,7 +110,7 @@ namespace MeshQTT.Managers.Notifications
                     sb.AppendLine($"• <b>{item.Key}:</b> {item.Value}");
                 }
             }
-            
+
             sb.AppendLine();
             sb.AppendLine($"<i>Event ID: {alertEvent.Id}</i>");
 
