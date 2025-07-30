@@ -50,7 +50,7 @@ namespace MeshQTT.Managers
 
                 // Convert to PFX format for MQTTnet
                 var pfxBytes = certificate.Export(X509ContentType.Pfx);
-                var pfxCertificate = X509CertificateLoader.LoadPkcs12(pfxBytes, null);
+                var pfxCertificate = new X509Certificate2(pfxBytes);
 
                 mqttServerOptionsBuilder
                     .WithEncryptedEndpoint()
