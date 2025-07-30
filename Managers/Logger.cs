@@ -106,9 +106,17 @@ namespace MeshQTT.Managers
                 var logName = Path.GetFileNameWithoutExtension(logPath);
                 var logExt = Path.GetExtension(logPath);
                 
-                // Create rotated filename with timestamp
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Create rotated filename with timestamp including milliseconds
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
                 var rotatedPath = Path.Combine(logDir, $"{logName}_{timestamp}{logExt}");
+
+                // Ensure unique filename
+                int counter = 1;
+                while (File.Exists(rotatedPath))
+                {
+                    rotatedPath = Path.Combine(logDir, $"{logName}_{timestamp}_{counter:D3}{logExt}");
+                    counter++;
+                }
 
                 // Move current log to rotated name
                 File.Move(logPath, rotatedPath);
@@ -129,15 +137,18 @@ namespace MeshQTT.Managers
 
             try
             {
-                // Find all rotated log files
+                // Find all rotated log files (excluding the current active log)
                 var pattern = $"{logName}_*{logExt}";
                 var logFiles = Directory.GetFiles(logDir, pattern)
                     .Select(f => new FileInfo(f))
                     .OrderByDescending(f => f.CreationTime)
                     .ToList();
 
+                // Keep MaxFiles-1 rotated files (since we also have the current active log)
+                var maxRotatedFiles = Math.Max(1, _logRotationConfig.MaxFiles - 1);
+
                 // Remove files beyond the max count
-                for (int i = _logRotationConfig.MaxFiles; i < logFiles.Count; i++)
+                for (int i = maxRotatedFiles; i < logFiles.Count; i++)
                 {
                     logFiles[i].Delete();
                 }
