@@ -246,7 +246,7 @@ namespace MeshQTT.Managers
                 }
 
                 // Check if user can subscribe to this topic
-                if (!TopicAccessManager.CanSubscribe(user, args.TopicFilter.Topic))
+                if (!TopicAccessManager.CanSubscribe(user, args.TopicFilter.Topic, config))
                 {
                     args.ProcessSubscription = false;
                     args.Response.ReasonCode = MQTTnet.Protocol.MqttSubscribeReasonCode.NotAuthorized;

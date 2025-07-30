@@ -38,6 +38,16 @@ namespace MeshQTT.Entities
         public List<User> Users { get; set; } = [];
 
         /// <summary>
+        /// Gets or sets the list of user groups.
+        /// </summary>
+        public List<Group> Groups { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the list of user roles.
+        /// </summary>
+        public List<Role> Roles { get; set; } = [];
+
+        /// <summary>
         /// Gets or sets the list of encryption keys.
         /// </summary>
         public List<string> EncryptionKeys { get; set; } = [];
@@ -67,6 +77,8 @@ namespace MeshQTT.Entities
             TlsEnabled = false;
             TlsPort = 8883;
             Users = new List<User>();
+            Groups = new List<Group>();
+            Roles = new List<Role>();
             EncryptionKeys = new List<string>();
             Banlist = new List<string>();
             PositionAppTimeoutMinutes = 30; // Default timeout in minutes
@@ -89,6 +101,8 @@ namespace MeshQTT.Entities
                     PrivateKeyPath = config.PrivateKeyPath;
                     CertificatePassword = config.CertificatePassword;
                     Users = config.Users;
+                    Groups = config.Groups ?? new List<Group>();
+                    Roles = config.Roles ?? new List<Role>();
                     EncryptionKeys = config.EncryptionKeys;
                     Banlist = config.Banlist;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
@@ -155,6 +169,8 @@ namespace MeshQTT.Entities
                             PrivateKeyPath = updatedConfig.PrivateKeyPath;
                             CertificatePassword = updatedConfig.CertificatePassword;
                             Users = updatedConfig.Users;
+                            Groups = updatedConfig.Groups ?? new List<Group>();
+                            Roles = updatedConfig.Roles ?? new List<Role>();
                             EncryptionKeys = updatedConfig.EncryptionKeys;
                             Banlist = updatedConfig.Banlist;
                             PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;

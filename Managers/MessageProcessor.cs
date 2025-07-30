@@ -35,7 +35,7 @@ namespace MeshQTT.Managers
 
                 // First check topic-level publish permissions
                 var user = GetUserFromSession(context.SessionItems, context.ClientId);
-                if (user != null && !TopicAccessManager.CanPublish(user, context.ApplicationMessage.Topic))
+                if (user != null && !TopicAccessManager.CanPublish(user, context.ApplicationMessage.Topic, config))
                 {
                     Logger.Log($"Publish denied for user {user.UserName} to topic {context.ApplicationMessage.Topic}");
                     MetricsManager.MessagesFiltered.Inc();
