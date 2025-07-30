@@ -10,6 +10,78 @@ It supports advanced filtering and processing of messages, making it ideal for a
 - Supports advanced filtering and processing of messages
 - **TLS/SSL Support** - Secure MQTT connections with automatic certificate generation
 - **Automated Alerting** - Comprehensive security and system monitoring with multi-channel notifications
+- **REST API** - Management API for listing nodes, banning/unbanning nodes, and managing settings
+
+## Management API
+
+MeshQTT includes a REST API for remote management and monitoring. The API provides the following capabilities:
+
+### Node Management
+- List all connected nodes with their status and location information
+- Get details of a specific node
+- Ban nodes from connecting to the network
+- Unban previously banned nodes
+
+### Configuration Management
+- View current configuration settings (read-only view)
+- Update non-sensitive configuration settings
+- Manage the node ban list
+
+### System Information
+- Get system statistics (node counts, user counts, etc.)
+- Health check endpoint for monitoring
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check endpoint |
+| `/api/nodes` | GET | List all connected nodes |
+| `/api/nodes/{nodeId}` | GET | Get specific node details |
+| `/api/nodes/{nodeId}/ban` | POST | Ban a node |
+| `/api/nodes/{nodeId}/ban` | DELETE | Unban a node |
+| `/api/config` | GET | Get current configuration |
+| `/api/config` | PUT | Update configuration settings |
+| `/api/stats` | GET | Get system statistics |
+
+### API Usage Examples
+
+#### Get all nodes
+```bash
+curl http://localhost:8080/api/nodes
+```
+
+#### Ban a node
+```bash
+curl -X POST http://localhost:8080/api/nodes/node123/ban \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Suspicious activity"}'
+```
+
+#### Unban a node
+```bash
+curl -X DELETE http://localhost:8080/api/nodes/node123/ban
+```
+
+#### Update configuration
+```bash
+curl -X PUT http://localhost:8080/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"positionAppTimeoutMinutes": 1440}'
+```
+
+### API Configuration
+
+The REST API runs on port 8080 by default. In debug mode, Swagger documentation is available at `http://localhost:8080/swagger`.
+
+The API responses follow a consistent format:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": { ... }
+}
+```
 
 ## Automated Alerting System
 
