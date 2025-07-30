@@ -17,6 +17,10 @@ namespace MeshQTT
 #if DEBUG
             isDebug = true;
 #endif
+
+            // Initialize Logger with configuration
+            Logger.Initialize(config);
+
             MetricsManager.StartPrometheusMetricsServer(isDebug);
             
             // Initialize AlertManager
