@@ -16,5 +16,9 @@
     <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
     <PackageReference Include="MQTTnet.Server" Version="5.0.1.1416" />
     <PackageReference Include="prometheus-net" Version="8.2.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>
