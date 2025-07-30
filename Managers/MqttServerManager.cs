@@ -83,6 +83,7 @@ namespace MeshQTT.Managers
                 await Task.CompletedTask;
             };
             mqttServer.InterceptingPublishAsync += messageProcessor.InterceptingPublishAsync;
+            mqttServer.InterceptingSubscriptionAsync += ValidateSubscription;
             mqttServer.ValidatingConnectionAsync += ValidateConnection;
 
             Logger.Log("About to start MQTT broker...");
@@ -228,6 +229,77 @@ namespace MeshQTT.Managers
 
                 throw;
             }
+        }
+
+        private async Task ValidateSubscription(InterceptingSubscriptionEventArgs args)
+        {
+            try
+            {
+                // Get the user from session items
+                var user = GetUserFromSession(args.SessionItems, args.ClientId);
+                if (user == null)
+                {
+                    args.ProcessSubscription = false;
+                    args.Response.ReasonCode = MQTTnet.Protocol.MqttSubscribeReasonCode.NotAuthorized;
+                    Logger.Log($"Subscription denied for client {args.ClientId} - user not found in session");
+                    return;
+                }
+
+                // Check if user can subscribe to this topic
+                if (!TopicAccessManager.CanSubscribe(user, args.TopicFilter.Topic))
+                {
+                    args.ProcessSubscription = false;
+                    args.Response.ReasonCode = MQTTnet.Protocol.MqttSubscribeReasonCode.NotAuthorized;
+                    Logger.Log($"Subscription denied for user {user.UserName} to topic {args.TopicFilter.Topic}");
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerSystemErrorAlert(
+                            $"Unauthorized subscription attempt by user {user.UserName} to topic {args.TopicFilter.Topic}",
+                            null
+                        );
+                    }
+                    return;
+                }
+
+                Logger.Log($"Subscription allowed for user {user.UserName} to topic {args.TopicFilter.Topic}");
+                args.ProcessSubscription = true;
+                args.Response.ReasonCode = MQTTnet.Protocol.MqttSubscribeReasonCode.GrantedQoS0;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Error validating subscription: {ex.Message}");
+                args.ProcessSubscription = false;
+                args.Response.ReasonCode = MQTTnet.Protocol.MqttSubscribeReasonCode.UnspecifiedError;
+
+                if (alertManager != null)
+                {
+                    await alertManager.TriggerSystemErrorAlert(
+                        $"Subscription validation error: {ex.Message}",
+                        ex
+                    );
+                }
+            }
+        }
+
+        private MeshQTT.Entities.User? GetUserFromSession(System.Collections.IDictionary sessionItems, string clientId)
+        {
+            // Try to find user by client ID
+            if (sessionItems.Contains(clientId) && sessionItems[clientId] is MeshQTT.Entities.User user)
+            {
+                return user;
+            }
+
+            // If not found by client ID, try to find by any key that contains a User object
+            foreach (var item in sessionItems.Values)
+            {
+                if (item is MeshQTT.Entities.User sessionUser)
+                {
+                    return sessionUser;
+                }
+            }
+
+            return null;
         }
     }
 }
