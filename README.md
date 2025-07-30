@@ -8,8 +8,32 @@ It supports advanced filtering and processing of messages, making it ideal for a
 - Handles encrypted Meshtastic packets
 - Allows for more specific control compared to normal MQTT brokers
 - Supports advanced filtering and processing of messages
+- **Enhanced Access Control** - Fine-grained topic ACLs, user groups, roles, and time-based restrictions
 - **TLS/SSL Support** - Secure MQTT connections with automatic certificate generation
 - **Automated Alerting** - Comprehensive security and system monitoring with multi-channel notifications
+
+## Enhanced Access Control System
+
+MeshQTT now includes a comprehensive access control system with the following features:
+
+- **Fine-grained Topic ACLs**: Control publish/subscribe access at the topic level with MQTT wildcard support
+- **User Groups**: Organize users into groups with shared permissions and inheritance
+- **User Roles**: Define roles with specific permissions that can be assigned to users
+- **Time-based Access**: Restrict access based on time of day, days of week, or date ranges
+- **Hierarchical Permissions**: Roles and groups can inherit from other roles/groups
+- **Priority-based Resolution**: Handle conflicts with priority and specificity rules
+- **Dynamic Reloading**: All ACL changes take effect immediately without broker restart
+- **Backward Compatibility**: Existing whitelist/blacklist configurations continue to work
+
+### Permission Types
+
+- **None (0)**: No access
+- **Read (1)**: Subscribe/read access only
+- **Write (2)**: Publish/write access only
+- **ReadWrite (3)**: Both read and write access
+- **Admin (7)**: Full administrative access
+
+For detailed configuration examples and usage, see [ENHANCED_ACL.md](ENHANCED_ACL.md).
 
 ## Automated Alerting System
 

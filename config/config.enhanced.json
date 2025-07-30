@@ -1,0 +1,187 @@
+{
+  "Port": 1883,
+  "TlsEnabled": false,
+  "TlsPort": 8883,
+  "CertificatePath": "certs/server.crt",
+  "PrivateKeyPath": "certs/server.key",
+  "CertificatePassword": "",
+  "Banlist": [],
+  "Groups": [
+    {
+      "Name": "MeshUsers",
+      "Description": "Basic mesh network users",
+      "Enabled": true,
+      "SubscriptionTopicLists": {
+        "WhitelistTopics": ["mesh/+/status", "mesh/+/position"],
+        "BlacklistTopics": ["admin/#"]
+      },
+      "PublishTopicLists": {
+        "WhitelistTopics": ["mesh/+/status"],
+        "BlacklistTopics": ["admin/#", "system/#"]
+      },
+      "ThrottleUser": true,
+      "MonthlyByteLimit": 1048576
+    },
+    {
+      "Name": "MeshAdmins",
+      "Description": "Mesh network administrators",
+      "Enabled": true,
+      "InheritsFrom": ["MeshUsers"],
+      "SubscriptionTopicLists": {
+        "WhitelistTopics": ["#"],
+        "BlacklistTopics": []
+      },
+      "PublishTopicLists": {
+        "WhitelistTopics": ["#"],
+        "BlacklistTopics": []
+      },
+      "ThrottleUser": false,
+      "MonthlyByteLimit": null
+    }
+  ],
+  "Roles": [
+    {
+      "Name": "DataReader",
+      "Description": "Can read sensor data and telemetry",
+      "Enabled": true,
+      "TopicPermissions": [
+        {
+          "TopicPattern": "sensor/+/data",
+          "Permission": 1,
+          "Priority": 100
+        },
+        {
+          "TopicPattern": "telemetry/#",
+          "Permission": 1,
+          "Priority": 100
+        }
+      ]
+    },
+    {
+      "Name": "DataWriter",
+      "Description": "Can write sensor data",
+      "Enabled": true,
+      "InheritsFrom": ["DataReader"],
+      "TopicPermissions": [
+        {
+          "TopicPattern": "sensor/+/data",
+          "Permission": 3,
+          "Priority": 200
+        }
+      ]
+    },
+    {
+      "Name": "SystemAdmin",
+      "Description": "Full system administrator",
+      "Enabled": true,
+      "TopicPermissions": [
+        {
+          "TopicPattern": "#",
+          "Permission": 7,
+          "Priority": 1000
+        }
+      ]
+    },
+    {
+      "Name": "ScheduledUser",
+      "Description": "User with time-based restrictions",
+      "Enabled": true,
+      "TopicPermissions": [
+        {
+          "TopicPattern": "temp/#",
+          "Permission": 3,
+          "Priority": 100,
+          "TimeRestriction": {
+            "AllowedDaysOfWeek": [1, 2, 3, 4, 5],
+            "AllowedHours": [
+              { "StartHour": 9, "EndHour": 17 }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "Users": [
+    {
+      "UserName": "meshuser1",
+      "ClientId": "meshuser1",
+      "Password": "password123",
+      "Groups": ["MeshUsers"],
+      "Roles": ["DataReader"],
+      "ValidateClientId": false
+    },
+    {
+      "UserName": "meshwriter",
+      "Password": "writer123",
+      "Groups": ["MeshUsers"],
+      "Roles": ["DataWriter"],
+      "ValidateClientId": false,
+      "TopicPermissions": [
+        {
+          "TopicPattern": "special/topic",
+          "Permission": 3,
+          "Priority": 2000
+        }
+      ]
+    },
+    {
+      "UserName": "meshadmin",
+      "Password": "admin123",
+      "Groups": ["MeshAdmins"],
+      "Roles": ["SystemAdmin"],
+      "ValidateClientId": false
+    },
+    {
+      "UserName": "timeduser",
+      "Password": "timed123",
+      "Roles": ["ScheduledUser"],
+      "ValidateClientId": false
+    },
+    {
+      "UserName": "leo",
+      "Password": "leo123",
+      "ValidateClientId": false,
+      "SubscriptionTopicLists": {
+        "BlacklistTopics": [],
+        "WhitelistTopics": ["#"]
+      },
+      "PublishTopicLists": {
+        "BlacklistTopics": [],
+        "WhitelistTopics": ["#"]
+      }
+    }
+  ],
+  "EncryptionKeys": ["AQ=="],
+  "PositionAppTimeoutMinutes": 720,
+  "Alerting": {
+    "Enabled": false,
+    "Providers": [
+      {
+        "Type": "email",
+        "Enabled": false,
+        "Config": {
+          "SmtpHost": "smtp.gmail.com",
+          "SmtpPort": "587",
+          "Username": "your-email@gmail.com",
+          "Password": "your-app-password",
+          "FromEmail": "your-email@gmail.com",
+          "ToEmail": "admin@yourdomain.com",
+          "EnableSsl": "true"
+        }
+      }
+    ],
+    "Security": {
+      "FailedLoginThreshold": 5,
+      "RapidNodeJoinsThreshold": 50,
+      "RapidNodeLeavesThreshold": 50,
+      "AlertOnNodeBan": true
+    },
+    "System": {
+      "MessageRateThreshold": 1000,
+      "NodeMessageRateThreshold": 100,
+      "AlertOnServiceRestart": true,
+      "AlertOnSystemErrors": true,
+      "ErrorRateThreshold": 10
+    }
+  }
+}

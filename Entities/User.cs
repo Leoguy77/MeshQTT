@@ -47,5 +47,21 @@ namespace MeshQTT.Entities
         /// Gets or sets a user's monthly limit in byte.
         /// </summary>
         public long? MonthlyByteLimit { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of group names this user belongs to
+        /// </summary>
+        public List<string> Groups { get; set; } = new();
+
+        /// <summary>
+        /// Gets or sets the list of role names assigned to this user
+        /// </summary>
+        public List<string> Roles { get; set; } = new();
+
+        /// <summary>
+        /// Gets or sets fine-grained topic permissions specific to this user
+        /// These permissions override group and role permissions
+        /// </summary>
+        public List<TopicPermission> TopicPermissions { get; set; } = new();
     }
 }
