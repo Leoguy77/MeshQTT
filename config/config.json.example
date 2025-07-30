@@ -118,5 +118,13 @@
       "AlertOnSystemErrors": true,
       "ErrorRateThreshold": 10
     }
+  },
+  "TelegramBot": {
+    "Enabled": false,
+    "BotToken": "your-bot-token-from-botfather",
+    "AuthorizedUsers": [],
+    "AuthorizedChats": [],
+    "RequireAuthentication": true,
+    "CommandPrefix": "/"
   }
 }
