@@ -110,4 +110,37 @@ namespace MeshQTT.Entities
         public AlertSeverity Severity { get; set; } = AlertSeverity.Medium;
         public Dictionary<string, object> Metadata { get; set; } = new();
     }
+
+    public class TelegramBotConfig
+    {
+        /// <summary>
+        /// Gets or sets whether the Telegram bot is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the bot token from @BotFather.
+        /// </summary>
+        public string BotToken { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the list of authorized user IDs who can control the bot.
+        /// </summary>
+        public List<long> AuthorizedUsers { get; set; } = new();
+
+        /// <summary>
+        /// Gets or sets the list of authorized chat IDs where the bot can operate.
+        /// </summary>
+        public List<long> AuthorizedChats { get; set; } = new();
+
+        /// <summary>
+        /// Gets or sets whether to require user authentication for commands.
+        /// </summary>
+        public bool RequireAuthentication { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets the command prefix (default is '/').
+        /// </summary>
+        public string CommandPrefix { get; set; } = "/";
+    }
 }

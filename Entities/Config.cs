@@ -54,6 +54,11 @@ namespace MeshQTT.Entities
         /// </summary>
         public AlertConfig Alerting { get; set; } = new();
 
+        /// <summary>
+        /// Gets or sets the Telegram bot configuration.
+        /// </summary>
+        public TelegramBotConfig TelegramBot { get; set; } = new();
+
         private FileSystemWatcher? _fileWatcher = null;
         private Timer? _pollingTimer = null;
         private DateTime _lastWriteTime;
@@ -71,6 +76,7 @@ namespace MeshQTT.Entities
             Banlist = new List<string>();
             PositionAppTimeoutMinutes = 30; // Default timeout in minutes
             Alerting = new AlertConfig();
+            TelegramBot = new TelegramBotConfig();
         }
 
         public Config(string filePath)
@@ -93,6 +99,7 @@ namespace MeshQTT.Entities
                     Banlist = config.Banlist;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
                     Alerting = config.Alerting ?? new AlertConfig();
+                    TelegramBot = config.TelegramBot ?? new TelegramBotConfig();
 
                     // FileSystemWatcher (may not work in Docker Desktop)
                     var configPath = Path.Combine(AppContext.BaseDirectory, "config");
@@ -159,6 +166,7 @@ namespace MeshQTT.Entities
                             Banlist = updatedConfig.Banlist;
                             PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;
                             Alerting = updatedConfig.Alerting ?? new AlertConfig();
+                            TelegramBot = updatedConfig.TelegramBot ?? new TelegramBotConfig();
                         }
                         Console.WriteLine("Reloaded config (polling)");
                         break;
