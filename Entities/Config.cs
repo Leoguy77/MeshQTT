@@ -1,5 +1,28 @@
 namespace MeshQTT.Entities
 {
+    public record LogRotationConfig
+    {
+        /// <summary>
+        /// Gets or sets whether log rotation is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets the maximum file size in MB before rotation (0 = disabled).
+        /// </summary>
+        public int MaxFileSizeMB { get; set; } = 10;
+
+        /// <summary>
+        /// Gets or sets the maximum age in days before rotation (0 = disabled).
+        /// </summary>
+        public int MaxAgeDays { get; set; } = 7;
+
+        /// <summary>
+        /// Gets or sets the maximum number of log files to keep.
+        /// </summary>
+        public int MaxFiles { get; set; } = 5;
+    }
+
     public record Config
     {
         /// <summary>
@@ -54,6 +77,11 @@ namespace MeshQTT.Entities
         /// </summary>
         public AlertConfig Alerting { get; set; } = new();
 
+        /// <summary>
+        /// Gets or sets the log rotation configuration.
+        /// </summary>
+        public LogRotationConfig LogRotation { get; set; } = new();
+
         private FileSystemWatcher? _fileWatcher = null;
         private Timer? _pollingTimer = null;
         private DateTime _lastWriteTime;
@@ -71,6 +99,7 @@ namespace MeshQTT.Entities
             Banlist = new List<string>();
             PositionAppTimeoutMinutes = 30; // Default timeout in minutes
             Alerting = new AlertConfig();
+            LogRotation = new LogRotationConfig();
         }
 
         public Config(string filePath)
@@ -93,6 +122,7 @@ namespace MeshQTT.Entities
                     Banlist = config.Banlist;
                     PositionAppTimeoutMinutes = config.PositionAppTimeoutMinutes;
                     Alerting = config.Alerting ?? new AlertConfig();
+                    LogRotation = config.LogRotation ?? new LogRotationConfig();
 
                     // FileSystemWatcher (may not work in Docker Desktop)
                     var configPath = Path.Combine(AppContext.BaseDirectory, "config");
@@ -159,6 +189,7 @@ namespace MeshQTT.Entities
                             Banlist = updatedConfig.Banlist;
                             PositionAppTimeoutMinutes = updatedConfig.PositionAppTimeoutMinutes;
                             Alerting = updatedConfig.Alerting ?? new AlertConfig();
+                            LogRotation = updatedConfig.LogRotation ?? new LogRotationConfig();
                         }
                         Console.WriteLine("Reloaded config (polling)");
                         break;
