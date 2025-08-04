@@ -31,6 +31,13 @@ namespace MeshQTT.Managers
         {
             try
             {
+                // Ensure context is valid
+                if (context?.ApplicationMessage == null)
+                {
+                    Logger.Log("Received null context or application message - skipping processing.");
+                    return;
+                }
+
                 MetricsManager.MessagesReceived.Inc();
 
                 var payload = context.ApplicationMessage.Payload;
@@ -44,7 +51,33 @@ namespace MeshQTT.Managers
                     context.ProcessPublish = false;
                     return;
                 }
-                string nodeID = context.ApplicationMessage.Topic.Split('/').Last();
+                
+                string? topic = context.ApplicationMessage?.Topic;
+                if (string.IsNullOrEmpty(topic))
+                {
+                    Logger.Log("Received MQTT message with empty or null topic - skipping processing.");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    return;
+                }
+
+                string[] topicParts = topic.Split('/');
+                if (topicParts.Length == 0)
+                {
+                    Logger.Log($"Received MQTT message with invalid topic format: {topic} - skipping processing.");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    return;
+                }
+
+                string nodeID = topicParts.Last();
+                if (string.IsNullOrEmpty(nodeID))
+                {
+                    Logger.Log($"Could not extract nodeID from topic: {topic} - skipping processing.");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    return;
+                }
 
                 // Extract gateway IP from the context (if available)
                 string? gatewayIp = null;
@@ -62,7 +95,7 @@ namespace MeshQTT.Managers
                 }
 
                 // Trigger message rate alert with node ID, gateway client ID, and gateway IP
-                if (alertManager != null)
+                if (alertManager != null && !string.IsNullOrEmpty(context.ClientId))
                 {
                     await alertManager.TriggerMessageRateAlert(nodeID, context.ClientId, gatewayIp);
                 }
@@ -76,14 +109,24 @@ namespace MeshQTT.Managers
                 }
                 MeshPacket? data = DecryptEnvelope(envelope);
 
-                if (config != null && config.Banlist.Contains(nodeID))
+                if (config != null && config.Banlist != null && config.Banlist.Contains(nodeID))
                 {
                     Logger.Log($"Blocked message from banned node {nodeID}.");
                     MetricsManager.MessagesFiltered.Inc();
                     context.ProcessPublish = false;
                     return;
                 }
-                switch (data?.Decoded.Portnum)
+
+                // Only process if we have valid decrypted data
+                if (data?.Decoded == null)
+                {
+                    Logger.Log("Failed to decrypt message or no valid decoded data, skipping further processing.");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    return;
+                }
+
+                switch (data.Decoded.Portnum)
                 {
                     case PortNum.TextMessageApp:
                         payloadHandler.HandleTextMessage(nodeID, envelope, data);
@@ -109,18 +152,26 @@ namespace MeshQTT.Managers
 
         public ServiceEnvelope? ProcessMeshtasticPayload(ReadOnlySequence<byte> payload)
         {
-            ServiceEnvelope envelope = ServiceEnvelope.Parser.ParseFrom(payload);
-            if (!IsValidEnvelope(envelope))
+            try
             {
-                Logger.Log("Received invalid ServiceEnvelope.");
+                ServiceEnvelope envelope = ServiceEnvelope.Parser.ParseFrom(payload);
+                if (!IsValidEnvelope(envelope))
+                {
+                    Logger.Log("Received invalid ServiceEnvelope.");
+                    return null;
+                }
+                return envelope;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to parse ServiceEnvelope: {ex.Message}");
                 return null;
             }
-            return envelope;
         }
 
         public bool IsValidEnvelope(ServiceEnvelope envelope)
         {
-            return !(
+            return envelope != null && !(
                 string.IsNullOrEmpty(envelope.GatewayId)
                 || string.IsNullOrEmpty(envelope.ChannelId)
                 || envelope.Packet == null
@@ -131,6 +182,13 @@ namespace MeshQTT.Managers
 
         public MeshPacket? DecryptEnvelope(ServiceEnvelope envelope)
         {
+            // Ensure we have a valid envelope and packet with encrypted data
+            if (envelope?.Packet?.Encrypted == null || envelope.Packet.Encrypted.IsEmpty)
+            {
+                Logger.Log("No encrypted data found in packet.");
+                return null;
+            }
+
             foreach (var key in config?.EncryptionKeys ?? new List<string>())
             {
                 try
@@ -156,13 +214,22 @@ namespace MeshQTT.Managers
                     if (
                         payload != null
                         && payload.Portnum > PortNum.UnknownApp
+                        && payload.Payload != null
                         && payload.Payload.Length > 0
                     )
                         return meshPacket;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    //Logger.Log($"Failed to decrypt with key {key}: {ex.Message}");
+                    // Only log if the key is valid to avoid exposing sensitive information
+                    if (!string.IsNullOrEmpty(key) && key.Length >= 4)
+                    {
+                        Logger.Log($"Failed to decrypt with key ending in {key.Substring(Math.Max(0, key.Length - 4))}: {ex.Message}");
+                    }
+                    else
+                    {
+                        Logger.Log($"Failed to decrypt with key: {ex.Message}");
+                    }
                 }
             }
             return null;
