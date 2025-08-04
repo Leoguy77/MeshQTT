@@ -34,6 +34,13 @@ namespace MeshQTT
             
             var messageProcessor = new MessageProcessor(nodes, config, alertManager);
             var mqttServerManager = new MqttServerManager(config, messageProcessor, nodes, alertManager);
+            
+            // Initialize Telegram Bot Manager
+            TelegramBotManager? telegramBotManager = null;
+            if (config != null)
+            {
+                telegramBotManager = new TelegramBotManager(config, nodes, alertManager);
+            }
 
             var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, eventArgs) =>
@@ -43,7 +50,18 @@ namespace MeshQTT
                 cts.Cancel();
             };
 
-            await mqttServerManager.StartAsync(cts.Token);
+            // Start both MQTT server and Telegram bot
+            var tasks = new List<Task>
+            {
+                mqttServerManager.StartAsync(cts.Token)
+            };
+
+            if (telegramBotManager != null)
+            {
+                tasks.Add(telegramBotManager.StartAsync(cts.Token));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }

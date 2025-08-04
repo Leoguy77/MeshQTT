@@ -171,6 +171,127 @@ To find your Chat ID:
 - `ChatId`: The chat ID where alerts should be sent (required)
 - `DisableNotification`: Set to `true` for silent notifications (optional, default: false)
 
+## Telegram Bot for Server Control
+
+MeshQTT includes a Telegram bot that allows remote administration of the server through chat commands. This provides secure, real-time control over node management and server monitoring.
+
+### Features
+
+- **Node Management**: Ban and unban nodes remotely
+- **Server Monitoring**: Check server status and connected nodes
+- **Security**: User and chat-based authentication
+- **Real-time Updates**: Commands update configuration instantly
+
+### Bot Commands
+
+#### Information Commands
+- `/help` - Show available commands and usage
+- `/status` - Display server status and statistics
+- `/nodes` - List connected nodes (active and inactive)
+- `/banlist` - Show currently banned nodes
+
+#### Node Management Commands
+- `/ban <nodeId> [reason]` - Ban a node from the network
+- `/unban <nodeId>` - Remove a node from the banlist
+
+### Bot Configuration
+
+Add the `TelegramBot` section to your `config.json`:
+
+```json
+{
+  "TelegramBot": {
+    "Enabled": true,
+    "BotToken": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz",
+    "AuthorizedUsers": [123456789, 987654321],
+    "AuthorizedChats": [-100123456789],
+    "RequireAuthentication": true,
+    "CommandPrefix": "/"
+  }
+}
+```
+
+#### Configuration Options
+
+- **`Enabled`**: Set to `true` to enable the bot (default: false)
+- **`BotToken`**: Your bot token from @BotFather (required)
+- **`AuthorizedUsers`**: List of Telegram user IDs allowed to control the bot
+- **`AuthorizedChats`**: List of chat IDs where the bot can operate
+- **`RequireAuthentication`**: Whether to enforce user/chat authorization (default: true)
+- **`CommandPrefix`**: Command prefix character (default: "/")
+
+### Setting Up the Telegram Bot
+
+#### 1. Create Your Bot
+
+1. Open Telegram and find @BotFather
+2. Send `/newbot` command
+3. Follow the prompts to name your bot
+4. Copy the bot token provided
+
+#### 2. Get User and Chat IDs
+
+**For your user ID:**
+1. Send a message to your bot
+2. Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+3. Look for the `"from": {"id": 123456789}` value
+
+**For group chats:**
+1. Add your bot to the group
+2. Send a message mentioning the bot (e.g., "Hello @your_bot_name")
+3. Visit the same URL as above
+4. Look for the `"chat": {"id": -100123456789}` value (negative for groups)
+
+#### 3. Configure and Start
+
+1. Update your `config.json` with the bot token and authorized users/chats
+2. Set `"Enabled": true` in the TelegramBot section
+3. Restart MeshQTT
+4. Test by sending `/help` to your bot
+
+### Security Features
+
+- **Authentication Required**: Only authorized users/chats can control the bot
+- **Command Validation**: All commands are validated before execution
+- **Audit Logging**: All bot actions are logged to the console
+- **Real-time Config Updates**: Changes are immediately reflected in the running server
+
+### Usage Examples
+
+```
+/status
+📊 MeshQTT Server Status
+🟢 Server: Running
+📡 Connected Nodes: 25
+🚫 Banned Nodes: 2
+⏰ Uptime: 02:15:30
+📋 MQTT Port: 1883
+
+/ban !12345678 Spamming the network
+✅ Node !12345678 has been banned.
+Reason: Spamming the network
+
+/nodes
+📡 Connected Nodes
+Total: 25 | Active (last 30m): 18
+🟢 !87654321 - 14:32:15
+🟢 !11111111 - 14:31:45
+🔴 !22222222 - 13:15:30
+...
+```
+
+### Troubleshooting
+
+**Bot doesn't respond:**
+- Check that the bot token is correct
+- Verify you're in an authorized chat/user list
+- Ensure the bot is enabled in configuration
+
+**"Not authorized" message:**
+- Add your user ID to AuthorizedUsers array
+- For groups, add the chat ID to AuthorizedChats array
+- Set RequireAuthentication to false to disable auth (not recommended)
+
 ### Rate Limiting
 
 The alerting system includes built-in rate limiting to prevent notification spam:
