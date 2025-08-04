@@ -53,7 +53,7 @@ namespace MeshQTT.Managers
                     return LoadCrtCertificate(certificatePath, privateKeyPath, password);
                 case ".pfx":
                 case ".p12":
-                    return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password);
+                    return new X509Certificate2(certificatePath, password);
                 default:
                     throw new NotSupportedException(
                         $"Certificate format {certExtension} is not supported"
@@ -115,7 +115,7 @@ namespace MeshQTT.Managers
             string? password
         )
         {
-            var cert = X509CertificateLoader.LoadCertificateFromFile(certificatePath);
+            var cert = new X509Certificate2(certificatePath);
 
             if (!string.IsNullOrEmpty(privateKeyPath) && File.Exists(privateKeyPath))
             {

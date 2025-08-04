@@ -6,6 +6,7 @@ services:
     ports:
       - "1883:1883" # MQTT port
       - "8883:8883" # MQTT TLS port
+      - "8080:8080" # Management API port
       - "9000:9000" # Metrics port
     volumes:
       - ./config:/App/config:rw
