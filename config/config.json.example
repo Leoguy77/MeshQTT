@@ -118,5 +118,11 @@
       "AlertOnSystemErrors": true,
       "ErrorRateThreshold": 10
     }
+  },
+  "LogRotation": {
+    "Enabled": true,
+    "MaxFileSizeMB": 10,
+    "MaxAgeDays": 7,
+    "MaxFiles": 5
   }
 }
