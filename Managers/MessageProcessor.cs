@@ -40,6 +40,24 @@ namespace MeshQTT.Managers
 
                 MetricsManager.MessagesReceived.Inc();
 
+                // First check topic-level publish permissions
+                var user = GetUserFromSession(context.SessionItems, context.ClientId);
+                if (user != null && !TopicAccessManager.CanPublish(user, context.ApplicationMessage.Topic, config))
+                {
+                    Logger.Log($"Publish denied for user {user.UserName} to topic {context.ApplicationMessage.Topic}");
+                    MetricsManager.MessagesFiltered.Inc();
+                    context.ProcessPublish = false;
+                    
+                    if (alertManager != null)
+                    {
+                        await alertManager.TriggerSystemErrorAlert(
+                            $"Unauthorized publish attempt by user {user.UserName} to topic {context.ApplicationMessage.Topic}",
+                            null
+                        );
+                    }
+                    return;
+                }
+
                 var payload = context.ApplicationMessage.Payload;
                 if (payload.IsEmpty || payload.Length == 0)
                 {
@@ -253,6 +271,26 @@ namespace MeshQTT.Managers
             // Handle IPv4 addresses like "192.168.1.1:12345"
             var lastColon = endpoint.LastIndexOf(':');
             return lastColon > 0 ? endpoint.Substring(0, lastColon) : endpoint;
+        }
+
+        private MeshQTT.Entities.User? GetUserFromSession(System.Collections.IDictionary sessionItems, string clientId)
+        {
+            // Try to find user by client ID
+            if (sessionItems.Contains(clientId) && sessionItems[clientId] is MeshQTT.Entities.User user)
+            {
+                return user;
+            }
+
+            // If not found by client ID, try to find by any key that contains a User object
+            foreach (var item in sessionItems.Values)
+            {
+                if (item is MeshQTT.Entities.User sessionUser)
+                {
+                    return sessionUser;
+                }
+            }
+
+            return null;
         }
     }
 }
