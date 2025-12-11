@@ -9,7 +9,7 @@ RUN dotnet restore
 RUN dotnet publish -o out
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 
 EXPOSE 1883 8883 9000
